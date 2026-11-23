@@ -1,0 +1,9 @@
+# Sistema e arquivos locais
+.DS_Store
+Thumbs.db
+
+# Credenciais e configurações privadas (serão usadas na etapa Supabase)
+.env
+.env.*
+!.env.example
+*.key
