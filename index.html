@@ -2612,6 +2612,32 @@ saveHomeShowcase=async function(){if(!adminSession||showcaseBusy)return;showcase
 
 /* Customer continuity: cart and newly created orders are also recorded in the
    authenticated account, while the local copy remains available offline. */
+const saveProductBeforeMediaSync = saveProduct;
+const pendingProductMedia = new Set();
+saveProduct = async function (id, form) {
+  if (pendingProductMedia.has(id)) return;
+  const before = products.find(product => product.id === id);
+  pendingProductMedia.add(id);
+  try {
+    await saveProductBeforeMediaSync(id, form);
+    const saved = products.find(product => product.id === id);
+    if (!saved || saved === before) return;
+    if (!window.riseSupabase || !adminSession) {
+      toast('Produto salvo neste navegador. Entre como administrador para sincronizar as mídias.');
+      return;
+    }
+    toast('Enviando a galeria do produto…');
+    await window.riseSupabaseBridge.publishProductMedia(saved);
+    await storeProductCatalog(products);
+    render();
+    toast('Galeria do produto sincronizada.');
+  } catch (error) {
+    console.warn('Falha ao sincronizar a galeria do produto.', error);
+    toast('A sincronização da galeria falhou. Confira a conexão e salve novamente.');
+  } finally {
+    pendingProductMedia.delete(id);
+  }
+};
 const riseAddCartBeforeCloud=addCart;
 addCart=async function(...args){const result=await riseAddCartBeforeCloud(...args);if(window.riseSupabase)window.riseSupabaseBridge.syncCart().catch(error=>console.warn('Carrinho local preservado; sincronização pendente.',error));return result};
 const riseRemoveCartBeforeCloud=removeCart;
