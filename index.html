@@ -2028,7 +2028,7 @@ const prepareBeforeKitShareGuard=kitPrepareShare;
 kitPrepareShare=async function(...args){if(kitShareBusy)return;kitShareBusy=true;try{return await prepareBeforeKitShareGuard(...args)}catch(e){toast('Não foi possível preparar a imagem. '+e.message)}finally{kitShareBusy=false}};
 
 function kitVariantOptions(p,list,row,item){
- const sale=r=>money(markupSale(r.costTotal,r.markup??p.pricing.markup??3));
+ const sale=r=>money(productSaleForRow(p,r));
  const option=r=>'<span class="kit-variant-name">'+esc([r.model,r.size].filter(Boolean).join(' · ')||p.name)+'</span><span class="kit-variant-quantity"><strong>'+esc(r.quantity+' '+(r.unit||'unidade(s)'))+'</strong></span><strong class="kit-variant-value">'+sale(r)+'</strong>';
  return '<details class="kit-variant-picker"><summary><span class="kit-variant-current">'+option(row)+'</span><span class="kit-variant-chevron" aria-hidden="true">⌄</span></summary><div class="kit-variant-list" role="group" aria-label="Opções de '+esc(p.name)+'">'+list.map(r=>'<button type="button" class="kit-variant-option '+(item&&r.index===row.index?'selected':'')+'" aria-pressed="'+Boolean(item&&r.index===row.index)+'" onclick="kitSetRow('+p.id+','+r.index+')">'+option(r)+'</button>').join('')+'</div></details>';
 }
@@ -2688,16 +2688,19 @@ function approvedCavaleteSale(product, row) {
   return 756.48;
 }
 const quoteBeforeApprovedCavalete = priceQuote;
+function productSaleForRow(product, row) {
+  return approvedCavaleteSale(product, row)
+    ?? markupSale(row.costTotal, row.markup ?? product.pricing?.markup ?? 3);
+}
 priceQuote = function (selection = config) {
   const quote = quoteBeforeApprovedCavalete(selection);
-  const sale = approvedCavaleteSale(selection?.p, quote?.row);
-  return sale === null ? quote : {...quote, productTotal:sale};
+  return quote ? {...quote, productTotal:productSaleForRow(selection.p,quote.row)} : quote;
 };
 const kitBeforeApprovedCavalete = kitSelected;
 kitSelected = function () {
   return kitBeforeApprovedCavalete().map(line => {
-    const sale = approvedCavaleteSale(line.p, line.r);
-    return sale === null ? line : {...line, sale:Math.round(sale * line.count * 100) / 100};
+    const sale = productSaleForRow(line.p,line.r);
+    return {...line, sale:Math.round(sale * line.count * 100) / 100};
   });
 };
 const saveProductBeforeMediaSync = saveProduct;
