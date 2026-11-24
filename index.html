@@ -417,7 +417,17 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 }
 @media(max-width:800px){
  .modal .kit-layout{display:flex;flex-direction:column;align-items:stretch}
- .modal .kit-layout>.kit-summary{order:-1;align-self:stretch;width:100%;box-sizing:border-box;max-height:38vh;max-height:38dvh;margin-bottom:20px;padding:16px;box-shadow:0 8px 22px #050d3814}
+ .modal .kit-layout>.kit-summary{
+  position:static!important;
+  top:auto!important;
+  align-self:stretch;
+  width:100%;
+  max-height:none;
+  overflow:visible;
+  overscroll-behavior:auto;
+  padding:16px;
+  box-shadow:0 8px 22px #050d3814;
+ }
  .modal .kit-layout>div{min-width:0}
 }
 
