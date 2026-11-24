@@ -2589,7 +2589,26 @@ window.riseSupabaseBridge=(function(){
   const updateRecoveredPassword=async form=>{const password=String(form.password?.value||''),confirmation=String(form.confirmation?.value||''),message=document.getElementById('recoveryError'),button=form.querySelector('button[type="submit"]');if(password.length<8){message.textContent='Crie uma senha com pelo menos 8 caracteres.';return}if(password!==confirmation){message.textContent='As duas senhas não são iguais.';return}if(button)button.disabled=true;message.textContent='';try{const {data,error}=await window.riseSupabase.auth.updateUser({password});if(error)throw error;history.replaceState({},document.title,window.location.pathname+window.location.search);const profile=await profileQuery(data.user);attachProfile(profile);closeModal();go(profile.role==='admin'?'dashboard':'account');toast('Senha atualizada. Agora você já pode acessar normalmente.')}catch(error){message.textContent=error.message||'Não foi possível atualizar a senha. Solicite um novo link e tente novamente.'}finally{if(button)button.disabled=false}};
   const openPasswordRecovery=()=>{modal('Criar nova senha',`<p>Defina abaixo a nova senha para o seu acesso RISE.</p><form onsubmit="event.preventDefault();window.riseSupabaseBridge.updateRecoveredPassword(this)"><div class="field"><label for="recovery-password">Nova senha</label><input id="recovery-password" name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Mínimo de 8 caracteres"></div><div class="field"><label for="recovery-confirmation">Confirmar nova senha</label><input id="recovery-confirmation" name="confirmation" type="password" autocomplete="new-password" required minlength="8" placeholder="Repita a nova senha"></div><p id="recoveryError" class="form-error" role="alert" aria-live="polite"></p><button type="submit" class="btn primary">Salvar nova senha</button></form>`,'',false)};
   const signOut=async()=>{if(window.riseSupabase)await window.riseSupabase.auth.signOut();adminSession=false;signedCustomerId=null;storeEditMode=false;adminStorePreview=false;try{sessionStorage.removeItem('rise-admin-session');sessionStorage.removeItem('rise-customer-session')}catch{}};
-  return {masterEmail,profileQuery,attachProfile,syncCatalog,loadSharedCatalog,loadSharedProductMedia,publishProductMedia,syncLocalProductMedia,publishBrandMedia,loadSharedBrandMedia,publishHomeContent,loadSharedHomeContent,loadSharedGlobalContent,syncCart,loadRemoteCart,publishOrder,loadRemoteOrders,signIn,signUpAdmin,signUpCustomer,requestPasswordReset,openPasswordResetRequest,updateRecoveredPassword,openPasswordRecovery,signOut};
+  const showcaseKey = 'home_video_showcase';
+  const readShowcase = async () => {
+    const {data,error} = await window.riseSupabase.from('site_settings')
+      .select('value').eq('setting_key',showcaseKey).maybeSingle();
+    if (error) throw error;
+    return Array.isArray(data?.value?.videos) ? data.value.videos : null;
+  };
+  const publishShowcase = async videos => {
+    const urls = [];
+    for (const [index, video] of videos.entries()) {
+      const data = await uploadPublicData('home/showcase', video, index);
+      const poster = await uploadPublicData('home/showcase/posters', video.poster, index);
+      urls.push({...video, data, poster});
+    }
+    const {error} = await window.riseSupabase.from('site_settings')
+      .upsert({setting_key:showcaseKey,value:{videos:urls}},{onConflict:'setting_key'});
+    if (error) throw error;
+    return urls;
+  };
+  return {masterEmail,profileQuery,attachProfile,syncCatalog,loadSharedCatalog,loadSharedProductMedia,publishProductMedia,syncLocalProductMedia,publishBrandMedia,loadSharedBrandMedia,publishHomeContent,loadSharedHomeContent,loadSharedGlobalContent,readShowcase,publishShowcase,syncCart,loadRemoteCart,publishOrder,loadRemoteOrders,signIn,signUpAdmin,signUpCustomer,requestPasswordReset,openPasswordResetRequest,updateRecoveredPassword,openPasswordRecovery,signOut};
 })();
 const riseAdminLoginPageBeforeSupabase=adminLoginPage;
 adminLoginPage=function(){return riseAdminLoginPageBeforeSupabase().replace('</form><div class="admin-local-notice">','</form><button type="button" class="link" onclick="window.riseSupabaseBridge.requestPasswordReset()">Esqueci minha senha</button><button type="button" class="link" onclick="window.riseSupabaseBridge.signUpAdmin()">Primeiro acesso? Criar senha do administrador</button><div class="admin-local-notice">')};
@@ -2617,6 +2636,40 @@ saveHomeShowcase=async function(){if(!adminSession||showcaseBusy)return;showcase
 
 /* Customer continuity: cart and newly created orders are also recorded in the
    authenticated account, while the local copy remains available offline. */
+let publishedShowcase;
+let showcaseReady = location.protocol === 'file:';
+const renderShowcaseBeforeCloud = homeVideoShowcase;
+const listShowcaseBeforeCloud = homeShowcaseVideos;
+homeShowcaseVideos = function () {
+  return publishedShowcase ?? listShowcaseBeforeCloud();
+};
+homeVideoShowcase = function () {
+  return showcaseReady ? renderShowcaseBeforeCloud() : '';
+};
+saveHomeShowcase = async function () {
+  if (!adminSession || showcaseBusy) return;
+  const status = document.getElementById('showcaseStatus');
+  const button = document.getElementById('showcaseSave');
+  showcaseBusy = true;
+  if (button) button.disabled = true;
+  try {
+    if (!window.riseSupabase) throw new Error('Abra o site publicado e entre como administrador.');
+    if (status) status.textContent = 'Enviando os vídeos para a nuvem…';
+    publishedShowcase = await window.riseSupabaseBridge.publishShowcase(showcaseDraft);
+    homeCreative = {...homeCreative, videoShowcase:publishedShowcase};
+    await storeHomeMedia({home:homeCreative,slides:homeSlides}).catch(console.warn);
+    closeModal();
+    render();
+    toast('Vídeos publicados.');
+  } catch (error) {
+    const message = 'Falha ao publicar os vídeos: ' + (error.message || 'erro desconhecido');
+    if (status?.isConnected) status.textContent = message;
+    else toast(message);
+  } finally {
+    showcaseBusy = false;
+    if (button) button.disabled = false;
+  }
+};
 const saveProductBeforeMediaSync = saveProduct;
 const pendingProductMedia = new Set();
 let productMediaSaveQueue = Promise.resolve();
@@ -2672,7 +2725,15 @@ try {
   console.warn('Catálogo remoto indisponível. Carregando as demais áreas da loja.', error);
 }
 await window.riseSupabaseBridge.loadSharedProductMedia();
-await window.riseSupabaseBridge.loadSharedGlobalContent();
+const sharedContent = await window.riseSupabaseBridge.loadSharedGlobalContent();
+try {
+  publishedShowcase = await window.riseSupabaseBridge.readShowcase()
+    ?? (sharedContent.home && Array.isArray(homeCreative.videoShowcase) ? homeCreative.videoShowcase : []);
+} catch (error) {
+  console.warn('Falha ao buscar os vídeos publicados.', error);
+  publishedShowcase = [];
+}
+showcaseReady = true;
 const sessionResult=await window.riseSupabase.auth.getSession();
 if(riseRecoveryLink&&sessionResult.data.session){window.riseSupabaseBridge.openPasswordRecovery()}else if(sessionResult.data.session){try{const profile=await window.riseSupabaseBridge.profileQuery(sessionResult.data.session.user);window.riseSupabaseBridge.attachProfile(profile);await Promise.allSettled([window.riseSupabaseBridge.loadRemoteCart(),window.riseSupabaseBridge.loadRemoteOrders()]);if(profile.role==='admin')window.riseSupabaseBridge.syncCatalog().then(()=>window.riseSupabaseBridge.syncLocalProductMedia()).then(count=>{if(count)console.info(`Galeria RISE sincronizada: ${count} produto(s).`)}).catch(error=>console.warn('Não foi possível sincronizar o catálogo local.',error));render()}catch(error){console.warn('Não foi possível restaurar a sessão RISE.',error)}}else render();
 </script></body></html>
