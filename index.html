@@ -2688,7 +2688,56 @@ function approvedCavaleteSale(product, row) {
   return 756.48;
 }
 const quoteBeforeApprovedCavalete = priceQuote;
+let sharedSalePrices = {};
+const salePriceKey = row => JSON.stringify([
+  row.model,row.size,row.material,row.printing,row.coating,row.finish,
+  row.quantity,row.width,row.height
+].map(value => String(value ?? '')));
+async function loadSharedSalePrices() {
+  const {data,error} = await window.riseSupabase.from('site_settings')
+    .select('setting_key,value').like('setting_key','sale_prices_%');
+  if (error) throw error;
+  sharedSalePrices = Object.fromEntries((data || []).map(item =>
+    [item.setting_key.slice('sale_prices_'.length),item.value]));
+}
+async function publishProductPricing(product, userId) {
+  const pricing = product.pricing;
+  if (!pricing) return;
+  const bucket = window.riseSupabase.storage.from('rise-order-files');
+  const path = userId + '/admin-pricing/' + product.id + '.json';
+  const {error:privateError} = await bucket.upload(path,
+    new Blob([JSON.stringify(pricing)],{type:'application/json'}),{upsert:true});
+  if (privateError) throw privateError;
+  const prices = {};
+  for (const row of [...(pricing.rows || [])].sort((a,b) => Number(a.origin === 'manual') - Number(b.origin === 'manual'))) {
+    if (Number(row.costTotal) > 0) prices[salePriceKey(row)] =
+      markupSale(row.costTotal,row.markup ?? pricing.markup ?? 3);
+  }
+  const {error} = await window.riseSupabase.from('site_settings')
+    .upsert({setting_key:'sale_prices_'+product.id,value:prices},{onConflict:'setting_key'});
+  if (error) throw error;
+  sharedSalePrices[product.id] = prices;
+}
+const editProductBeforeCloudPricing = editProduct;
+editProduct = async function(id) {
+  if (window.riseSupabase && adminSession && sharedSalePrices[id]) {
+    try {
+      const {data,error} = await window.riseSupabase.auth.getUser();
+      if (error || !data?.user) throw error || new Error('Sessão indisponível.');
+      const {data:file,error:downloadError} = await window.riseSupabase.storage
+        .from('rise-order-files').download(data.user.id + '/admin-pricing/' + id + '.json');
+      if (downloadError) throw downloadError;
+      const pricing = JSON.parse(await file.text());
+      products = products.map(p => p.id === Number(id) ? {...p,pricing} : p);
+    } catch (error) {
+      return toast('Não foi possível carregar a precificação administrativa: ' + error.message);
+    }
+  }
+  return editProductBeforeCloudPricing(id);
+};
 function productSaleForRow(product, row) {
+  const published = sharedSalePrices[product.id]?.[salePriceKey(row)];
+  if (Number.isFinite(published)) return published;
   return approvedCavaleteSale(product, row)
     ?? markupSale(row.costTotal, row.markup ?? product.pricing?.markup ?? 3);
 }
@@ -2724,6 +2773,7 @@ saveProduct = async function (id, form) {
       if (error || !data?.user) {
         throw new Error('Entre novamente como administrador no site publicado.');
       }
+      await publishProductPricing(saved,data.user.id);
       await window.riseSupabaseBridge.publishProductMedia(saved);
     });
     productMediaSaveQueue = sync.catch(() => {});
@@ -2758,6 +2808,7 @@ try {
   console.warn('Catálogo remoto indisponível. Carregando as demais áreas da loja.', error);
 }
 await window.riseSupabaseBridge.loadSharedProductMedia();
+await loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
 const sharedContent = await window.riseSupabaseBridge.loadSharedGlobalContent();
 try {
   publishedShowcase = await window.riseSupabaseBridge.readShowcase()
