@@ -2626,7 +2626,11 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const riseRecoveryLink=/(?:[?#&])type=recovery(?:&|$)/.test(window.location.href);
 window.riseSupabase=createClient('https://zcunyirxvvbgegncolkp.supabase.co','sb_publishable_RK1TSDDZ-60RlOAiNZcW_g_oJXL25v1',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 window.riseSupabase.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(()=>window.riseSupabaseBridge.openPasswordRecovery(),0)});
-await window.riseSupabaseBridge.loadSharedCatalog();
+try {
+  await window.riseSupabaseBridge.loadSharedCatalog();
+} catch (error) {
+  console.warn('Catálogo remoto indisponível. Carregando as demais áreas da loja.', error);
+}
 await window.riseSupabaseBridge.loadSharedProductMedia();
 await window.riseSupabaseBridge.loadSharedGlobalContent();
 const sessionResult=await window.riseSupabase.auth.getSession();
