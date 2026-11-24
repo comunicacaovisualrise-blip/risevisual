@@ -2680,6 +2680,26 @@ saveHomeShowcase = async function () {
     if (button) button.disabled = false;
   }
 };
+function approvedCavaleteSale(product, row) {
+  if (Number(product?.id) !== 3 || row?.model !== 'Cavalete e Banner' ||
+      row.size !== '45 × 96 cm' || row.material !== 'Lona Brilho 340g' ||
+      row.printing !== '4x0 - Colorido Frente' || row.coating !== 'Sem Enobrecimento' ||
+      row.finish !== 'Estrutura Alumínio - Ilhós' || Number(row.quantity) !== 1) return null;
+  return 756.48;
+}
+const quoteBeforeApprovedCavalete = priceQuote;
+priceQuote = function (selection = config) {
+  const quote = quoteBeforeApprovedCavalete(selection);
+  const sale = approvedCavaleteSale(selection?.p, quote?.row);
+  return sale === null ? quote : {...quote, productTotal:sale};
+};
+const kitBeforeApprovedCavalete = kitSelected;
+kitSelected = function () {
+  return kitBeforeApprovedCavalete().map(line => {
+    const sale = approvedCavaleteSale(line.p, line.r);
+    return sale === null ? line : {...line, sale:Math.round(sale * line.count * 100) / 100};
+  });
+};
 const saveProductBeforeMediaSync = saveProduct;
 const pendingProductMedia = new Set();
 let productMediaSaveQueue = Promise.resolve();
