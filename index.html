@@ -864,7 +864,12 @@ function uploadVariantSlot(mi,si){if(!adminSession||imageBusy)return;chooseMedia
 async function uploadGeneralProductMedia(input){if(!adminSession||imageBusy)return;mediaEditScope={model:'',size:''};await uploadProductImages(input)}
 const variantPreviewsBeforeCover=renderImagePreviews;
 renderImagePreviews=function(){variantPreviewsBeforeCover();const general=document.getElementById('productGeneralPreviews');if(!general)return;general.innerHTML=imageDraft.map((m,i)=>({m,i})).filter(({m})=>exactScope(m,{model:'',size:''})).map(({m,i},order)=>'<div class="image-preview">'+productMediaThumb(m,m.name)+'<span class="pill">'+(order===0?'Capa do produto':'Mídia geral '+(order+1))+'</span><button type="button" class="link" onclick="removeDraftImage('+i+')">Remover</button>'+(m.kind!=='video'&&!m.data.startsWith('data:image/gif')?'<button type="button" class="btn media-crop-button" onclick="editProductMediaCrop('+i+')">Zoom e enquadramento</button>':'')+(order?'<button type="button" class="link" onclick="mediaEditScope={model: &quot;&quot;,size: &quot;&quot;};coverScopedMedia('+i+')">Usar como capa</button>':'')+'</div>').join('')||'<p class="hint">Envie a capa geral na área acima. Ela é independente das fotos dos modelos.</p>';if(!mediaEditScope.size)document.getElementById('productImagePreviews').innerHTML=''};
-matchingProductPhotos=function(p){return (p.images||[]).filter(im=>(im.model||'')===(config.model||'')&&(im.size||'')===config.size)};
+matchingProductPhotos=function(p){
+  const sizeKey = value => String(value || '').toLowerCase().replace(/\s+/g, '').replace(/×/g, 'x');
+  return (p.images || []).filter(media =>
+    (media.model || '') === (config.model || '') && sizeKey(media.size) === sizeKey(config.size)
+  );
+};
 const galleryBeforeGeneralCover=galleryArt;
 galleryArt=function(p,unique){const general=(p.images||[]).filter(m=>!m.model&&!m.size);if(general.length)return galleryBeforeGeneralCover({...p,images:general},unique);return '<div class="art product-photo"><img src="'+configurationImage(p,p.models?.[0]||'',p.sizes[0])+'" alt="'+esc(p.name)+'"></div>'};
 
@@ -2614,6 +2619,7 @@ saveHomeShowcase=async function(){if(!adminSession||showcaseBusy)return;showcase
    authenticated account, while the local copy remains available offline. */
 const saveProductBeforeMediaSync = saveProduct;
 const pendingProductMedia = new Set();
+let productMediaSaveQueue = Promise.resolve();
 saveProduct = async function (id, form) {
   if (pendingProductMedia.has(id)) return;
   const before = products.find(product => product.id === id);
@@ -2627,13 +2633,21 @@ saveProduct = async function (id, form) {
       return;
     }
     toast('Enviando a galeria do produto…');
-    await window.riseSupabaseBridge.publishProductMedia(saved);
+    const sync = productMediaSaveQueue.then(async () => {
+      const { data, error } = await window.riseSupabase.auth.getUser();
+      if (error || !data?.user) {
+        throw new Error('Entre novamente como administrador no site publicado.');
+      }
+      await window.riseSupabaseBridge.publishProductMedia(saved);
+    });
+    productMediaSaveQueue = sync.catch(() => {});
+    await sync;
     await storeProductCatalog(products);
     render();
     toast('Galeria do produto sincronizada.');
   } catch (error) {
     console.warn('Falha ao sincronizar a galeria do produto.', error);
-    toast('A sincronização da galeria falhou. Confira a conexão e salve novamente.');
+    toast('Galeria salva neste navegador. Falha no envio: ' + (error.message || 'erro desconhecido'));
   } finally {
     pendingProductMedia.delete(id);
   }
