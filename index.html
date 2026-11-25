@@ -908,7 +908,7 @@ function notifications(){modal('Central de notificações','<div class="detail-r
 function howWorks(){modal('Sua ideia, em quatro passos.','<div class="timeline"><div><strong>01 · Escolha e configure</strong><p class="hint">Selecione produto, medida, material e quantidade.</p></div><div><strong>02 · Envie sua arte</strong><p class="hint">Anexe seu arquivo ou contrate criação.</p></div><div><strong>03 · Confira e aprove</strong><p class="hint">A produção começa após arte e pagamento aprovados.</p></div><div><strong>04 · Receba seu projeto</strong><p class="hint">Acompanhe produção e envio pela área de pedidos.</p></div></div>')}
 function clientOrders(){closeModal();go('account')}
 let accountTab='orders';
-function accountPage(){if(!currentCustomer())return loginPage();const orders=state.orders.filter(o=>o.customerId===currentCustomer().id);return `<div class="shop">${shopHeader()}<main class="shop-body customer-area"><div class="breadcrumb"><button onclick="go('shop')">Início</button> / Minha conta</div><div class="customer-heading"><div class="eyebrow">ESPAÇO DO CLIENTE</div><h1>Sua marca. Seus projetos.</h1><p>Do primeiro pedido à próxima grande ideia, acompanhe tudo por aqui.</p></div><div class="customer-layout"><aside class="customer-sidebar"><div class="customer-profile"><button class="avatar-trigger" onclick="openAvatarMenu('customer')" aria-label="Editar meu perfil">${profileAvatar('customer')}</button><strong>${esc(currentCustomer().fullName||currentCustomer().contactName||currentCustomer().legalName)}</strong><small>Área demonstrativa do cliente</small><button class="profile-edit-trigger" onclick="editCustomerProfile()">Editar perfil e endereço ↗</button></div>${[['orders','bag','Meus pedidos'],['files','file','Minhas artes'],['profile','users','Meus dados']].map(t=>`<button class="nav-btn ${accountTab===t[0]?'active':''}" onclick="accountTab='${t[0]}';render()">${icon(t[1])}<span>${t[2]}</span></button>`).join('')}<button class="nav-btn" onclick="go('shop')">${icon('store')} Continuar comprando</button></aside><section class="customer-main">${accountTab==='orders'?`<div class="row between"><h2>Meus pedidos</h2><span class="pill gray">${orders.length} projeto(s)</span></div>${orders.length?orders.map(o=>`<article class="customer-order"><div class="row between"><div><small>PEDIDO #${esc(o.id)}</small><h3>${esc(o.product)}</h3></div><div class="customer-order-statuses">${customerOrderReviewMarkup(o)}${badge(o.status)}</div></div><p class="hint">${esc(o.spec||'Configuração registrada no pedido')}</p><div class="order-progress">${['Pedido recebido','Arte aprovada','Em produção','Entrega'].map((s,i)=>`<div class="progress-step ${i===0||(i===1&&['Em produção','Enviado','Em rota','Concluído'].includes(o.status))||(i===2&&['Em produção','Enviado','Em rota','Concluído'].includes(o.status))||(i===3&&['Enviado','Em rota','Concluído'].includes(o.status))?'done':''}"><span>${i+1}</span>${s}</div>`).join('')}</div><div class="row between"><strong>${money(o.total)}</strong><button class="btn" onclick="customerOrderDetail('${o.id}')">Acompanhar pedido ${icon('arrow')}</button></div></article>`).join(''):customerEmpty('Seu próximo projeto começa aqui.','Escolha um produto, personalize com sua marca e acompanhe cada etapa neste espaço.')}` : accountTab==='files'?`<h2>Minhas artes</h2><p class="hint">Arquivos selecionados para os seus pedidos.</p>${orders.flatMap(o=>(o.files||[]).map(f=>`<div class="customer-order"><strong>${esc(f.item)}</strong><p class="hint">Pedido #${o.id} · ${esc(f.name||f.brief||'Arte ainda não enviada')}</p><span class="pill gray">Referência local · sem envio ao servidor</span></div>`)).join('')||customerEmpty('Suas artes ficam organizadas aqui.','Após criar um pedido, você verá as referências dos arquivos selecionados.')}`: customerProfile()}</section></div><div class="prototype-note">Demonstração local: pedidos associados ao cadastro selecionado neste navegador. Autorização segura no servidor, pagamento e armazenamento online serão integrados posteriormente.</div></main></div>`}
+function accountPage(){if(!currentCustomer())return loginPage();const orders=state.orders.filter(o=>o.customerId===currentCustomer().id);return `<div class="shop">${shopHeader()}<main class="shop-body customer-area"><div class="breadcrumb"><button onclick="go('shop')">Início</button> / Minha conta</div><div class="customer-heading"><div class="eyebrow">ESPAÇO DO CLIENTE</div><h1>Sua marca. Seus projetos.</h1><p>Do primeiro pedido à próxima grande ideia, acompanhe tudo por aqui.</p></div><div class="customer-layout"><aside class="customer-sidebar"><div class="customer-profile"><button class="avatar-trigger" onclick="openAvatarMenu('customer')" aria-label="Editar meu perfil">${profileAvatar('customer')}</button><strong>${esc(currentCustomer().fullName||currentCustomer().contactName||currentCustomer().legalName)}</strong><small>Conta RISE</small><button class="profile-edit-trigger" onclick="editCustomerProfile()">Editar perfil e endereço ↗</button></div>${[['orders','bag','Meus pedidos'],['quotes','file','Meus orçamentos'],['files','file','Minhas artes'],['profile','users','Meus dados']].map(t=>`<button class="nav-btn ${accountTab===t[0]?'active':''}" onclick="${t[0]==='quotes'?'showCustomerQuotes()':`accountTab='${t[0]}';render()`}">${icon(t[1])}<span>${t[2]}</span></button>`).join('')}<button class="nav-btn" onclick="go('shop')">${icon('store')} Continuar comprando</button></aside><section class="customer-main">${accountTab==='orders'?`<div class="row between"><h2>Meus pedidos</h2><button type="button" class="btn" onclick="showCustomerQuotes()">Meus orçamentos</button><span class="pill gray">${orders.length} projeto(s)</span></div>${orders.length?orders.map(o=>`<article class="customer-order"><div class="row between"><div><small>PEDIDO #${esc(o.id)}</small><h3>${esc(o.product)}</h3></div><div class="customer-order-statuses">${customerOrderReviewMarkup(o)}${badge(o.status)}</div></div><p class="hint">${esc(o.spec||'Configuração registrada no pedido')}</p><div class="order-progress">${['Pedido recebido','Arte aprovada','Em produção','Entrega'].map((s,i)=>`<div class="progress-step ${i===0||(i===1&&['Em produção','Enviado','Em rota','Concluído'].includes(o.status))||(i===2&&['Em produção','Enviado','Em rota','Concluído'].includes(o.status))||(i===3&&['Enviado','Em rota','Concluído'].includes(o.status))?'done':''}"><span>${i+1}</span>${s}</div>`).join('')}</div><div class="row between"><strong>${money(o.total)}</strong>${window.orderPaymentPreviewButton?.(o)||''}<button class="btn" onclick="customerOrderDetail('${o.id}')">Acompanhar pedido ${icon('arrow')}</button></div></article>`).join(''):customerEmpty('Seu próximo projeto começa aqui.','Escolha um produto, personalize com sua marca e acompanhe cada etapa neste espaço.')}` : accountTab==='quotes'?(window.customerQuoteListMarkup?.()||'<h2>Meus orçamentos</h2>'): accountTab==='files'?`<h2>Minhas artes</h2><p class="hint">Arquivos selecionados para os seus pedidos.</p>${orders.flatMap(o=>(o.files||[]).map(f=>`<div class="customer-order"><strong>${esc(f.item)}</strong><p class="hint">Pedido #${o.id} · ${esc(f.name||f.brief||'Arte ainda não enviada')}</p><span class="pill gray">Referência local · sem envio ao servidor</span></div>`)).join('')||customerEmpty('Suas artes ficam organizadas aqui.','Após criar um pedido, você verá as referências dos arquivos selecionados.')}`: customerProfile()}</section></div></main></div>`}
 function customerEmpty(title,sub){return `<div class="customer-empty"><div class="empty-mark">${icon('bag')}</div><h3>${title}</h3><p>${sub}</p><button class="btn primary" onclick="go('shop')">Explorar os produtos ${icon('arrow')}</button></div>`}
 function customerOrderDetail(id){let o=state.orders.find(o=>String(o.id)===String(id)&&currentCustomer()&&o.customerId===currentCustomer().id);if(!o)return;modal('Acompanhar pedido #'+esc(id),`${customerOrderReviewMarkup(o)} ${badge(o.status)}<div class="detail-row"><span>Produto</span><strong style="max-width:60%;text-align:right">${esc(o.product)}</strong></div><p class="hint">${esc(o.spec||'')}</p><div class="detail-row"><span>Total</span><strong>${money(o.total)}</strong></div><div class="detail-row"><span>Rastreamento</span><strong>${esc(o.tracking||'Ainda não disponível')}</strong></div><p class="hint">A produção depende da aprovação da arte e do pagamento. Os prazos de produção e transporte são contados separadamente.</p><div class="alert">Pedido de demonstração. Nenhuma cobrança foi realizada.</div>`)}
 
@@ -1469,7 +1469,7 @@ function crmReminders(){return state.deals.filter(d=>crmDue(d)).sort((a,b)=>Date
 function crmHistoryMarkup(deals){const events=deals.flatMap(d=>[{type:'Oportunidade',text:d.name+' · '+crmStages[d.stage]+' · '+money(d.value)+(d.notes?' · Produtos/observações: '+d.notes:''),at:d.createdAt||'',author:'Registro comercial',deal:d.name},...(d.history||[]).map(e=>({...e,deal:d.name}))]);events.sort((a,b)=>(Date.parse(b.at)||0)-(Date.parse(a.at)||0));return '<div class="crm-timeline">'+(events.map(e=>'<article><div class="row between"><strong>'+esc(e.type)+'</strong><small>'+esc(e.at?crmDate(e.at):'Registro anterior, sem data')+'</small></div><p>'+esc(e.text).replace(/\n/g,'<br>')+'</p><small>'+esc(e.deal)+' · '+esc(e.author||'Administrador')+'</small></article>').join('')||'<p class="hint">Nenhum registro comercial para este cliente.</p>')+'</div>'}
 function crmCustomerHistory(id){if(!adminSession)return;const d=state.deals.find(x=>String(x.id)===String(id));if(!d)return;const related=state.deals.filter(x=>crmKey(x)===crmKey(d));modal('Histórico de '+esc(d.person),'<p class="hint">'+esc(d.company||'Cliente')+' · '+related.length+' oportunidade(s)</p>'+crmHistoryMarkup(related),'',true)}
 function crmReminderMarkup(){const due=crmReminders();return '<section class="panel crm-followups"><div class="panel-head"><div><h3>Retornos e cobranças</h3><p>'+due.length+' lembrete(s) vencido(s) ou para agora</p></div></div>'+ (due.length?due.map(d=>'<div class="crm-followup"><div><strong>'+esc(d.person)+' · '+esc(d.name)+'</strong><p>'+esc(d.reminderText||'Retomar contato sobre a proposta em aberto.')+'</p><small>Agendado: '+esc(crmDate(d.nextContact))+'</small></div><button class="btn" onclick="dealDetail('+d.id+')">Registrar retorno</button></div>').join(''):'<p class="hint" style="padding:0 20px 16px">Nenhum retorno vencido. Agende o próximo contato dentro da oportunidade.</p>')+'</section>'}
-crm=function(){const open=state.deals.filter(crmIsOpen);return intro('CRM de clientes','Acompanhe propostas, acordos e cada retorno até a decisão do cliente.', '<button class="btn" onclick="clientList()">Clientes e histórico</button><button class="btn primary" onclick="newDeal()">+ Nova oportunidade</button>')+'<div class="crm-summary"><span class="pill blue">'+open.length+' em aberto · '+money(open.reduce((s,d)=>s+Number(d.value||0),0))+'</span><span class="pill">'+state.deals.filter(d=>Number(d.stage)===3).length+' vendas concluídas</span><span class="pill gray">'+state.deals.filter(d=>Number(d.stage)===4).length+' não fechadas</span></div>'+crmReminderMarkup()+'<div class="crm-board">'+crmStages.map((stage,i)=>'<section class="column"><div class="column-title"><strong>'+stage+'</strong><span>'+state.deals.filter(d=>Number(d.stage)===i).length+'</span></div>'+state.deals.filter(d=>Number(d.stage)===i).map(d=>'<article class="deal"><span class="pill gray">'+esc(d.company||'Pessoa física')+'</span><h4>'+esc(d.name)+'</h4><small>'+esc(d.person)+'</small><p class="crm-card-notes">'+esc(d.notes||'Produtos ainda não discriminados.')+'</p><div class="price">'+money(d.value)+'</div>'+(d.nextContact&&crmIsOpen(d)?'<p class="crm-due '+(crmDue(d)?'overdue':'')+'">'+(crmDue(d)?'Retorno pendente: ':'Próximo contato: ')+esc(crmDate(d.nextContact))+'</p>':'')+'<button class="link" onclick="dealDetail('+d.id+')">Abrir negociação →</button></article>').join('')+'<button class="link" onclick="newDeal('+i+')">+ Nova oportunidade</button></section>').join('')+'</div>'};
+crm=function(){const open=state.deals.filter(crmIsOpen);return intro('CRM de clientes','Acompanhe propostas, acordos e cada retorno até a decisão do cliente.', '<button class="btn" onclick="clientList()">Clientes e histórico</button><button class="btn primary" onclick="newDeal()">+ Nova oportunidade</button>')+'<div class="crm-summary"><span class="pill blue">'+open.length+' em aberto · '+money(open.reduce((s,d)=>s+Number(d.value||0),0))+'</span><span class="pill">'+state.deals.filter(d=>Number(d.stage)===3).length+' vendas concluídas</span><span class="pill gray">'+state.deals.filter(d=>Number(d.stage)===4).length+' não fechadas</span></div>'+crmReminderMarkup()+'<div class="crm-board">'+crmStages.map((stage,i)=>'<section class="column"><div class="column-title"><strong>'+stage+'</strong><span>'+(state.deals.filter(d=>Number(d.stage)===i).length+(window.quoteCardsForCrmColumn?.(i).length||0))+'</span></div>'+(window.quoteCardsForCrmColumn?.(i).map(window.crmQuoteCardMarkup).join('')||'')+state.deals.filter(d=>Number(d.stage)===i).map(d=>'<article class="deal"><span class="pill gray">'+esc(d.company||'Pessoa física')+'</span><h4>'+esc(d.name)+'</h4><small>'+esc(d.person)+'</small><p class="crm-card-notes">'+esc(d.notes||'Produtos ainda não discriminados.')+'</p><div class="price">'+money(d.value)+'</div>'+(d.nextContact&&crmIsOpen(d)?'<p class="crm-due '+(crmDue(d)?'overdue':'')+'">'+(crmDue(d)?'Retorno pendente: ':'Próximo contato: ')+esc(crmDate(d.nextContact))+'</p>':'')+'<button class="link" onclick="dealDetail('+d.id+')">Abrir negociação →</button></article>').join('')+'<button class="link" onclick="newDeal('+i+')">+ Nova oportunidade</button></section>').join('')+'</div>'};
 function crmStageOptions(stage){return crmStages.map((s,i)=>'<option value="'+i+'" '+(Number(stage)===i?'selected':'')+'>'+s+'</option>').join('')}
 function crmCustomerOptions(){return customerAccounts.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.fullName||c.legalName||c.email)+' · '+esc(c.email)+'</option>').join('')}
 function crmFillCustomer(select){const c=customerAccounts.find(c=>String(c.id)===String(select.value));if(!c)return;const f=select.form;f.elements.namedItem('person').value=c.fullName||c.legalName||'';f.elements.namedItem('company').value=c.legalName||c.company||'';f.elements.namedItem('phone').value=c.mobile||c.phone||'';f.elements.namedItem('email').value=c.email||''}
@@ -3879,7 +3879,7 @@ async function loadCommercialData() {
   if (quotes.error) throw quotes.error;
   if (deals.error) throw deals.error;
   remoteKitQuotes = quotes.data.map(row => ({...row.payload,id:row.id,customerId:row.customer_id,
-    createdAt:row.created_at,readAt:row.read_at,outcomeAt:row.filtered_at,status:row.filtered_at?'filtered':'new',
+    number:row.quote_number,commercialStage:row.commercial_stage,createdAt:row.created_at,readAt:row.read_at,outcomeAt:row.filtered_at,status:row.filtered_at?'filtered':'new',
     orderId:row.orders?.order_number,importedBy:row.imported_by,legacyId:row.legacy_id,remote:true}));
   const old = state.deals.filter(deal => !remoteDealRevisions.has(Number(deal.id)) &&
     !deals.data.some(row => Number(row.id) === Number(deal.id)));
@@ -3963,7 +3963,7 @@ kitUpdateRequest = async function(id,change) {
     const updated = structuredClone(quote);
     change(updated);
     const {error} = await window.riseSupabase.from('rise_kit_quotes')
-      .update({read_at:updated.readAt,filtered_at:updated.outcomeAt||null})
+      .update({read_at:updated.readAt,filtered_at:updated.outcomeAt||null,...(updated.status==='filtered'?{commercial_stage:'lost'}:{})})
       .eq('id',id).select('id').single();
     if (error) throw error;
     await loadCommercialData();
@@ -4281,6 +4281,123 @@ window.importRiseLegacyCommercial=async function() {
     toast(imported+' registro(s) sincronizado(s). '+skipped+' para conferir neste navegador.');
   } catch (error) { toast('Não foi possível importar os registros: '+error.message); }
   finally { legacyCommercialImportRunning=false; }
+};
+const quoteStageLabels={sent:'Orçamento enviado',negotiating:'Em negociação',won:'Venda concluída',lost:'Venda não fechada'};
+const quoteColumnStages=[null,'sent','negotiating','won','lost'];
+function quoteStage(quote){return quote.orderId?'won':quote.commercialStage||'sent'}
+window.quoteCardsForCrmColumn=function(index){
+  return adminSession?remoteKitQuotes.filter(quote=>quoteStage(quote)===quoteColumnStages[index]):[];
+};
+window.crmQuoteCardMarkup=function(quote){
+  return '<article class="deal"><span class="pill gray">'+quoteStageLabels[quoteStage(quote)]+'</span>'+
+    '<h4>Orçamento #'+esc(quote.number)+'</h4><p>'+esc(quote.contact?.name||'Cliente')+'</p>'+
+    '<div class="price">'+money(quote.total)+'</div><button type="button" class="link" data-quote="'+esc(quote.id)+
+    '" onclick="openCrmKitQuote(this.dataset.quote)">Ver orçamento →</button></article>';
+};
+function quoteItemsMarkup(quote){
+  return (Array.isArray(quote.items)?quote.items:[]).map(item=>'<div class="detail-row"><div><strong>'+
+    esc(item.name)+'</strong><p class="hint">'+esc(item.configuration||'')+' · Qtde. '+esc(item.count)+'</p></div><strong>'+
+    money(item.sale)+'</strong></div>').join('')+
+    '<div class="detail-row"><span>Arte</span><strong>'+money(quote.design||0)+'</strong></div>'+
+    '<div class="detail-row"><span>Frete</span><strong>'+money(quote.freight||0)+'</strong></div>'+
+    '<div class="detail-row"><strong>Total do orçamento</strong><strong>'+money(quote.total)+'</strong></div>';
+}
+window.openCrmKitQuote=function(id){
+  const quote=remoteKitQuotes.find(item=>item.id===id);
+  if(!adminSession||!quote)return;
+  const stage=quoteStage(quote), phone=String(quote.contact?.phone||'');
+  const digitsOnly=phone.replace(/\D/g,'');
+  const number=digitsOnly.length<=11?'55'+digitsOnly:digitsOnly;
+  const contact='<h3>Contato do cliente</h3><p>'+esc(quote.contact?.name||'Cliente')+'</p><p>'+
+    esc(quote.contact?.email||'')+'</p><p>'+esc(phone)+'</p>'+
+    (digitsOnly.length>=10?'<p><a class="btn" href="tel:+'+number+'">Ligar</a> <a class="btn" href="https://wa.me/'+number+'" target="_blank" rel="noopener noreferrer">WhatsApp</a></p>':'');
+  let footer=quote.imagePath?'<button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openKitRequestImage(this.dataset.quote)">Ver imagem do orçamento</button> ':'';
+  footer+=stage==='won'?
+    '<button type="button" class="btn primary" data-order="'+esc(quote.orderId)+'" onclick="orderDetail(this.dataset.order)">Ver pedido #'+esc(quote.orderId)+'</button>':
+    '<button type="submit" class="btn primary" form="crmQuoteStageForm">Salvar status</button>';
+  modal('Orçamento #'+esc(quote.number),'<span class="pill blue">'+quoteStageLabels[stage]+'</span><p class="hint">'+
+    esc(noticeDate(quote.createdAt))+'</p>'+contact+quoteItemsMarkup(quote)+
+    (quote.comment?'<p><strong>Sobre a arte</strong><br>'+esc(quote.comment)+'</p>':'')+
+    (stage==='won'?'':'<form id="crmQuoteStageForm" data-quote="'+esc(id)+'" onsubmit="event.preventDefault();saveCrmQuoteStage(this)">'+
+      '<label>Status comercial<select name="stage">'+['sent','negotiating','won','lost'].map(value=>
+      '<option value="'+value+'" '+(stage===value?'selected':'')+'>'+quoteStageLabels[value]+'</option>').join('')+
+      '</select></label></form>'),footer,true);
+};
+window.saveCrmQuoteStage=async function(form){
+  const id=form.dataset.quote,stage=form.elements.namedItem('stage').value;
+  const quote=remoteKitQuotes.find(item=>item.id===id);
+  if(!adminSession||!quote||quote.orderId||kitConversionsBusy.has(id))return;
+  kitConversionsBusy.add(id);
+  try{
+    if(stage==='won'){
+      const {error}=await window.riseSupabase.rpc('convert_rise_kit_quote',{quote_id:id});
+      if(error)throw error;
+      await window.riseSupabaseBridge.loadRemoteOrders();
+    }else{
+      if(!['sent','negotiating','lost'].includes(stage))return;
+      const {error}=await window.riseSupabase.from('rise_kit_quotes').update({
+        commercial_stage:stage,filtered_at:stage==='lost'?new Date().toISOString():null,read_at:quote.readAt||new Date().toISOString()
+      }).eq('id',id).is('order_id',null).select('id').single();
+      if(error)throw error;
+      await loadCommercialData();
+    }
+    closeModal();go('crm');toast(stage==='won'?'Venda concluída. O pedido já está no histórico do cliente.':'Status do orçamento atualizado.');
+  }catch(error){toast('Não foi possível atualizar o orçamento: '+error.message)}
+  finally{kitConversionsBusy.delete(id)}
+};
+let customerQuotesOwner='',customerQuotes=[],customerQuotesState='idle';
+window.customerQuoteListMarkup=function(){
+  const owner=currentCustomer()?.id;
+  if(owner!==customerQuotesOwner||customerQuotesState==='idle')return '<h2>Meus orçamentos</h2><p role="status">Carregando orçamentos…</p>';
+  if(customerQuotesState==='error')return '<h2>Meus orçamentos</h2><p>Não foi possível carregar os orçamentos.</p><button class="btn" onclick="showCustomerQuotes()">Tentar novamente</button>';
+  return '<h2>Meus orçamentos</h2>'+(customerQuotes.length?customerQuotes.map(quote=>
+    '<article class="customer-order"><div class="row between"><h3>Orçamento #'+esc(quote.number)+'</h3><span class="pill">'+
+    quoteStageLabels[quote.stage]+'</span></div><p class="hint">'+esc(noticeDate(quote.createdAt))+'</p>'+
+    '<p>'+esc(quote.items.map(item=>item.name).join(' · '))+'</p><div class="row between"><strong>'+money(quote.total)+
+    '</strong><button class="btn" data-quote="'+esc(quote.id)+'" onclick="openCustomerQuote(this.dataset.quote)">Ver orçamento</button></div></article>'
+  ).join(''):'<p>Você ainda não enviou nenhum orçamento.</p>');
+};
+window.showCustomerQuotes=async function(){
+  const owner=currentCustomer()?.id;
+  if(!owner||!window.riseSupabase)return;
+  accountTab='quotes';
+  customerQuotesOwner=owner;customerQuotes=[];customerQuotesState='idle';
+  go('account');
+  const {data,error}=await window.riseSupabase.rpc('rise_my_quotes');
+  if(currentCustomer()?.id!==owner||customerQuotesOwner!==owner)return;
+  customerQuotesState=error?'error':'ready';
+  customerQuotes=Array.isArray(data)?data:[];
+  if(state.view==='account'&&accountTab==='quotes')render();
+};
+window.openCustomerQuote=function(id){
+  if(currentCustomer()?.id!==customerQuotesOwner)return;
+  const quote=customerQuotes.find(item=>item.id===id);
+  if(!quote)return;
+  modal('Orçamento #'+esc(quote.number),'<span class="pill">'+quoteStageLabels[quote.stage]+'</span>'+quoteItemsMarkup(quote),
+    quote.orderNumber?'<button class="btn primary" data-order="'+esc(quote.orderNumber)+
+      '" onclick="accountTab=\'orders\';go(\'account\');customerOrderDetail(this.dataset.order)">Acompanhar pedido #'+esc(quote.orderNumber)+'</button>':'',true);
+};
+window.openCustomerOrderPaymentPreview=function(id){
+  const order=ownedRepeatOrder(id);
+  if(!order||!order.remoteId||order.paymentStatus==='paid'||order.payment?.confirmedAt||
+    ['Cancelado','Concluído'].includes(order.status)||order.reviewDecision==='Não aceito')return;
+  modal('Pagamento do pedido #'+esc(id),'<div class="detail-row"><strong>Total do pedido</strong><strong>'+money(order.total)+
+    '</strong></div>'+paymentPreviewOptions(),'<button class="btn" data-order="'+esc(id)+
+    '" onclick="customerOrderDetail(this.dataset.order)">Voltar ao pedido</button>');
+};
+window.orderPaymentPreviewButton=function(order){
+  return order.remoteId&&['pending','proof_sent','rejected'].includes(order.paymentStatus)&&
+    !order.payment?.confirmedAt&&!['Cancelado','Concluído'].includes(order.status)&&order.reviewDecision!=='Não aceito'
+      ?'<button type="button" class="btn primary" data-order="'+esc(order.id)+
+       '" onclick="openCustomerOrderPaymentPreview(this.dataset.order)">Efetuar pagamento</button>':'';
+};
+const quoteGo=go;
+go=function(view,...args){
+  const result=quoteGo(view,...args);
+  if(view==='crm'&&adminSession&&window.riseSupabase)loadCommercialData().then(()=>{
+    if(state.view==='crm')render();
+  }).catch(error=>console.warn('Não foi possível atualizar o CRM.',error));
+  return result;
 };
 const sharedPricesRequest = loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
 const sharedCatalogOrderRequest = loadPublishedCatalogOrder().catch(error => console.warn("Ordem compartilhada indisponível.",error));
