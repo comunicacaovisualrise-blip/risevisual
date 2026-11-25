@@ -2952,7 +2952,18 @@ window.riseSupabaseBridge=(function(){
     if (error) throw error;
     return urls;
   };
-  return {masterEmail,profileQuery,attachProfile,syncCatalog,loadSharedCatalog,loadSharedProductMedia,publishProductMedia,syncLocalProductMedia,publishBrandMedia,loadSharedBrandMedia,publishHomeContent,loadSharedHomeContent,loadSharedGlobalContent,readShowcase,publishShowcase,syncCart,loadRemoteCart,publishOrder,loadRemoteOrders,signIn,signUpAdmin,signUpCustomer,requestPasswordReset,openPasswordResetRequest,updateRecoveredPassword,openPasswordRecovery,signOut};
+  const attachCheckoutArtwork = async (orderId, items) => {
+    if (!items.some(item => item.artworkReferences?.length)) return;
+    const {data:{user}} = await window.riseSupabase.auth.getUser();
+    if (!user) throw Error('Sessão expirada.');
+    const {data:rows,error} = await window.riseSupabase.from('order_items').select('id,configuration').eq('order_id',orderId);
+    if (error) throw error;
+    for (const row of rows || []) {
+      const refs = items[Number(row.configuration?.checkout_index)]?.artworkReferences || [];
+      for (const [index,ref] of refs.entries()) await uploadArtworkRecord(orderId,row.id,user.id,ref,index);
+    }
+  };
+  return {masterEmail,profileQuery,attachProfile,syncCatalog,loadSharedCatalog,loadSharedProductMedia,publishProductMedia,syncLocalProductMedia,publishBrandMedia,loadSharedBrandMedia,publishHomeContent,loadSharedHomeContent,loadSharedGlobalContent,readShowcase,publishShowcase,syncCart,loadRemoteCart,publishOrder,attachCheckoutArtwork,loadRemoteOrders,signIn,signUpAdmin,signUpCustomer,requestPasswordReset,openPasswordResetRequest,updateRecoveredPassword,openPasswordRecovery,signOut};
 })();
 const riseAdminLoginPageBeforeSupabase=adminLoginPage;
 adminLoginPage=function(){return riseAdminLoginPageBeforeSupabase().replace('</form><div class="admin-local-notice">','</form><button type="button" class="link" onclick="window.riseSupabaseBridge.requestPasswordReset()">Esqueci minha senha</button><button type="button" class="link" onclick="window.riseSupabaseBridge.signUpAdmin()">Primeiro acesso? Criar senha do administrador</button><div class="admin-local-notice">')};
@@ -3448,7 +3459,65 @@ async function savePublishedDelivery(form) {
   persist();
   toast('Frete publicado para todos os aparelhos.');
 }
-finishCheckout=function(form){const result=riseFinishCheckoutBeforeCloud(form);const created=state.orders?.[0];if(window.riseSupabase&&created)window.riseSupabaseBridge.publishOrder(created).then(remote=>{created.remoteId=remote.id;created.id=String(remote.order_number);created.status=remote.status;try{persist()}catch{};toast('Pedido salvo na sua conta e disponível em todos os aparelhos.')}).catch(error=>{console.warn('Pedido local preservado; sincronização pendente.',error);toast('Seu pedido foi registrado aqui. A sincronização online será tentada no próximo acesso.')});return result};
+finishCheckout = async function (form) {
+  if (!currentCustomer()) return riseFinishCheckoutBeforeCloud(form);
+  if (checkoutSubmissionBusy || artworkUploadsBusy.size) return;
+  if (!state.cart.length || !form.reportValidity() || !auditRevalidateCart()) return;
+  if (!window.riseSupabase) return toast('Conexão indisponível. Seu carrinho foi preservado.');
+  const group = form.querySelector('[data-checkout-address]');
+  if (group && cepFieldState.get(cepField(group,'zip'))?.loading) return toast('Aguarde a busca do CEP.');
+  if (group) syncCombinedCepAddress(group);
+  const items = state.cart.slice();
+  if (items.some(item => item.repeatArtMode === 'upload' && !item.artworkReferences?.length)) {
+    return toast('Anexe a nova arte antes de confirmar.');
+  }
+  const total = quoteTotalsForSelection('delivery');
+  if (!total.available) return toast('Confira o frete antes de confirmar.');
+  const requestKey = 'rise-cloud-checkout:' + checkoutRequestForCart();
+  let requestId;
+  try {
+    requestId = sessionStorage.getItem(requestKey) || crypto.randomUUID();
+    sessionStorage.setItem(requestKey,requestId);
+  } catch { return toast('Não foi possível preparar a tentativa de pedido.'); }
+  checkoutSubmissionBusy = true;
+  const submit = form.querySelector('[type="submit"]');
+  if (submit) submit.disabled = true;
+  try {
+    const payload = items.map(item => {
+      const config = item.configuration || {};
+      const variant = {...config,size:config.widthCm != null ? 'Personalizado' : config.size,
+        width:config.widthCm,height:config.heightCm};
+      return {product_id:String(item.id),variant:JSON.parse(salePriceKey(variant)),design:!!item.design,
+        expected_total:Number(item.total)};
+    });
+    const field = name => form.elements.namedItem(name)?.value || '';
+    const {data,error} = await window.riseSupabase.rpc('create_rise_checkout',{
+      request_id:requestId,items:payload,customer:{name:field('name'),company:field('company'),
+        phone:field('phone'),address:group ? readCepAddress(group) : {address:field('address')},
+        delivery_method:'delivery',expected_total:total.grandTotal}
+    });
+    if (error) throw error;
+    if (!data?.id) throw Error('O servidor não retornou o número do pedido.');
+    state.cart = state.cart.filter(item => !items.includes(item));
+    persist();
+    sessionStorage.removeItem(requestKey);
+    const followUp = await Promise.allSettled([
+      window.riseSupabaseBridge.syncCart(),window.riseSupabaseBridge.loadRemoteOrders(),
+      window.riseSupabaseBridge.attachCheckoutArtwork(data.id,items)
+    ]);
+    const filesFailed = followUp[2].status === 'rejected';
+    modal('Pedido #'+esc(String(data.order_number))+' recebido',
+      '<p>Total confirmado: <strong>'+esc(money(Number(data.total)))+'</strong>.</p>'+
+      (filesFailed ? '<p>O pedido foi salvo. O envio das referências de arte precisa ser conferido com a RISE.</p>' : ''),
+      '<button class="btn primary" onclick="closeModal();go(\'account\')">Ver meus pedidos</button>');
+    render();
+  } catch (error) {
+    toast('Não foi possível confirmar o pedido: ' + error.message);
+  } finally {
+    checkoutSubmissionBusy = false;
+    if (submit) submit.disabled = false;
+  }
+};
 const riseSaveCustomerProfileBeforeCloud=saveCustomerProfile;
 saveCustomerProfile=async function(form){const before=JSON.stringify(currentCustomer()||{});const result=await riseSaveCustomerProfileBeforeCloud(form);const customer=currentCustomer();if(!window.riseSupabase||!customer||before===JSON.stringify(customer))return result;try{const details={...customer};const {error:profileError}=await window.riseSupabase.from('profiles').update({full_name:customer.fullName||customer.contactName||customer.legalName||'',company_name:customer.legalName||customer.tradeName||'',phone:customer.mobile||'',details}).eq('id',customer.id);if(profileError)throw profileError;const address={customer_id:customer.id,label:'Principal',recipient_name:customer.fullName||customer.contactName||customer.legalName||'',phone:customer.mobile||'',zip_code:customer.address?.zip||'',street:customer.address?.street||'',number:customer.address?.number||'',complement:customer.address?.complement||'',district:customer.address?.district||'',city:customer.address?.city||'',state:customer.address?.uf||'',is_default:true};const {data:existing,error:addressReadError}=await window.riseSupabase.from('customer_addresses').select('id').eq('customer_id',customer.id).eq('is_default',true).maybeSingle();if(addressReadError)throw addressReadError;const {error:addressError}=existing?await window.riseSupabase.from('customer_addresses').update(address).eq('id',existing.id):await window.riseSupabase.from('customer_addresses').insert(address);if(addressError)throw addressError;toast('Perfil e endereço sincronizados em todos os aparelhos.')}catch(error){console.warn('Perfil local preservado; sincronização pendente.',error);toast('Perfil salvo aqui. A sincronização será tentada no próximo acesso.')}return result};
 </script>
