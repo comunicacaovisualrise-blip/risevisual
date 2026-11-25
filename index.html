@@ -522,7 +522,25 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 .rise-about-portal[open] {display:grid;place-items:center;text-align:center}
 .rise-about-portal.rise-about-video {padding:0;background:#050d26}
 .rise-about-video::before,.rise-about-video::after {display:none}
-.rise-about-video video {display:block;width:100%;height:100%;object-fit:contain}
+.rise-about-video video {
+  display:block;
+  width:min(100vw,177.7778vh);
+  width:min(100vw,177.7778dvh);
+  height:auto;
+  aspect-ratio:16/9;
+  object-fit:contain;
+  --fade-x:linear-gradient(to right,transparent,#000 8%,#000 92%,transparent);
+  --fade-y:linear-gradient(to bottom,transparent,#000 8%,#000 92%,transparent);
+  -webkit-mask-image:var(--fade-x),var(--fade-y);
+  -webkit-mask-composite:source-in;
+  mask-image:var(--fade-x),var(--fade-y);
+  mask-composite:intersect;
+}
+.rise-about-video video.is-portrait {
+  width:min(100vw,56.25vh);
+  width:min(100vw,56.25dvh);
+  aspect-ratio:9/16;
+}
 .rise-about-video video::-webkit-media-controls {display:none!important}
 .rise-about-portal::before,.rise-about-portal::after {
   content:"";
@@ -3162,6 +3180,7 @@ go = function (view, ...args) {
   const video = document.createElement('video');
   const mobile = matchMedia('(max-width:760px), (pointer:coarse) and (orientation:portrait)').matches;
   video.src = mobile ? 'sobre-nos-mobile.mp4' : 'sobre-nos-desktop.mp4';
+  video.classList.toggle('is-portrait',mobile);
   video.playsInline = true;
   video.controls = false;
   video.disablePictureInPicture = true;
