@@ -518,6 +518,12 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
   line-height:1;
   text-indent:0;
 }
+.home-creativity-bottom .carousel-arrow svg {
+  display:block;
+  width:16px;
+  height:16px;
+  margin:0;
+}
 .summary .product-support-breakdown{
   display:block;
   margin-top:14px;
@@ -2977,6 +2983,12 @@ const updatePriceBeforeProductSupport = updatePrice;
 const homeCarouselBeforeBelowControls = homeCarousel;
 homeCarousel = function (...args) {
   return homeCarouselBeforeBelowControls(...args).replace(
+    /(<button\b[^>]*class="carousel-arrow (previous|next)"[^>]*>)[‹›](<\/button>)/g,
+    (_, opening, direction, closing) => {
+      const path = direction === 'previous' ? 'M10 4 6 8l4 4' : 'm6 4 4 4-4 4';
+      return opening + '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="' + path + '"/></svg>' + closing;
+    }
+  ).replace(
     /(<div class="carousel-controls">[\s\S]*?<\/div>)<\/section>$/,
     '</section>$1'
   );
