@@ -1469,9 +1469,9 @@ function crmCustomerOptions(){return customerAccounts.map(c=>'<option value="'+e
 function crmFillCustomer(select){const c=customerAccounts.find(c=>String(c.id)===String(select.value));if(!c)return;const f=select.form;f.elements.namedItem('person').value=c.fullName||c.legalName||'';f.elements.namedItem('company').value=c.legalName||c.company||'';f.elements.namedItem('phone').value=c.mobile||c.phone||'';f.elements.namedItem('email').value=c.email||''}
 newDeal=function(stage=0){if(!adminSession)return;modal('Nova oportunidade',`<form onsubmit="event.preventDefault();createDeal(this)"><div class="field"><label>Cliente cadastrado (opcional)</label><select name="customerId" onchange="crmFillCustomer(this)"><option value="">Contato ainda não cadastrado</option>${crmCustomerOptions()}</select></div><div class="field"><label>Nome do projeto</label><input name="name" required maxlength="160"></div><div class="grid2"><div class="field"><label>Empresa</label><input name="company"></div><div class="field"><label>Nome do contato</label><input name="person" required></div><div class="field"><label>Telefone</label><input name="phone" type="tel"></div><div class="field"><label>E-mail</label><input name="email" type="email"></div><div class="field"><label>Valor estimado (R$)</label><input name="value" type="number" min="0" step="0.01" required></div><div class="field"><label>Etapa comercial</label><select name="stage">${crmStageOptions(stage)}</select></div></div><div class="field"><label>Produtos da oferta / observações</label><textarea name="notes" rows="4" placeholder="Informe produtos, modelos, medidas, quantidades e condições da oferta." required></textarea></div><div class="field"><label>Motivo da venda não fechada (se aplicável)</label><textarea name="lossReason"></textarea></div><div class="grid2"><div class="field"><label>Próximo contato / cobrança</label><input type="datetime-local" name="nextContact"></div><div class="field"><label>O que lembrar</label><input name="reminderText" placeholder="Ex.: cobrar retorno do orçamento"></div></div><p class="hint">Lembretes internos no administrativo. Nenhuma mensagem é enviada automaticamente ao cliente.</p><button class="btn primary">Salvar oportunidade</button></form>`,'',true)};
 function crmFormValue(f,name){return String(f.elements.namedItem(name)?.value||'').trim()}
-createDeal=function(f){if(!adminSession)return;const value=Number(crmFormValue(f,'value')),stage=Number(crmFormValue(f,'stage')),notes=crmFormValue(f,'notes'),person=crmFormValue(f,'person'),name=crmFormValue(f,'name'),lossReason=crmFormValue(f,'lossReason');if(!person||!name||!notes||!Number.isFinite(value)||value<0||!crmStages[stage])return toast('Preencha os dados e os produtos da oferta.');if(stage===4&&!lossReason)return toast('Informe por que a venda não foi fechada.');const nextContact=crmFormValue(f,'nextContact');if(nextContact&&!Number.isFinite(Date.parse(nextContact)))return toast('Confira a data de retorno.');const d={id:Date.now(),name,person,company:crmFormValue(f,'company'),customerId:crmFormValue(f,'customerId'),phone:crmFormValue(f,'phone'),email:crmFormValue(f,'email'),value,stage,notes,lossReason,nextContact,reminderText:crmFormValue(f,'reminderText'),createdAt:new Date().toISOString(),history:[crmEvent('Oportunidade criada',name+' · '+crmStages[stage]+' · '+money(value)+'\nProdutos/observações: '+notes+(lossReason?'\nMotivo: '+lossReason:''))]};if(nextContact)d.history.push(crmEvent('Retorno agendado',crmDate(nextContact)+' · '+(d.reminderText||'Retomar proposta')));if(crmCommit([...state.deals,d])){closeModal();go('crm');toast('Oportunidade e histórico salvos.')}};
+createDeal=async function(f){if(!adminSession)return;const value=Number(crmFormValue(f,'value')),stage=Number(crmFormValue(f,'stage')),notes=crmFormValue(f,'notes'),person=crmFormValue(f,'person'),name=crmFormValue(f,'name'),lossReason=crmFormValue(f,'lossReason');if(!person||!name||!notes||!Number.isFinite(value)||value<0||!crmStages[stage])return toast('Preencha os dados e os produtos da oferta.');if(stage===4&&!lossReason)return toast('Informe por que a venda não foi fechada.');const nextContact=crmFormValue(f,'nextContact');if(nextContact&&!Number.isFinite(Date.parse(nextContact)))return toast('Confira a data de retorno.');const d={id:Date.now(),name,person,company:crmFormValue(f,'company'),customerId:crmFormValue(f,'customerId'),phone:crmFormValue(f,'phone'),email:crmFormValue(f,'email'),value,stage,notes,lossReason,nextContact,reminderText:crmFormValue(f,'reminderText'),createdAt:new Date().toISOString(),history:[crmEvent('Oportunidade criada',name+' · '+crmStages[stage]+' · '+money(value)+'\nProdutos/observações: '+notes+(lossReason?'\nMotivo: '+lossReason:''))]};if(nextContact)d.history.push(crmEvent('Retorno agendado',crmDate(nextContact)+' · '+(d.reminderText||'Retomar proposta')));if(await crmCommit([...state.deals,d])){closeModal();go('crm');toast('Oportunidade e histórico salvos.')}};
 dealDetail=function(id){if(!adminSession)return;const d=state.deals.find(x=>String(x.id)===String(id));if(!d)return;modal(esc(d.name),`<p><strong>${esc(d.person)}</strong> · ${esc(d.company||'Pessoa física')}</p><p>${esc(d.phone||'')} ${esc(d.email||'')}</p><form onsubmit="event.preventDefault();saveDeal(${d.id},this)"><div class="grid2"><div class="field"><label>Etapa comercial</label><select name="stage">${crmStageOptions(d.stage)}</select></div><div class="field"><label>Valor negociado (R$)</label><input name="value" type="number" min="0" step="0.01" value="${Number(d.value)||0}" required></div></div><div class="field"><label>Produtos da oferta / observações</label><textarea name="notes" rows="4" required>${esc(d.notes||'')}</textarea></div><div class="field"><label>Motivo da venda não fechada</label><textarea name="lossReason">${esc(d.lossReason||'')}</textarea></div><div class="grid2"><div class="field"><label>Próximo contato / cobrança</label><input type="datetime-local" name="nextContact" value="${esc(d.nextContact||'')}"></div><div class="field"><label>O que lembrar</label><input name="reminderText" value="${esc(d.reminderText||'')}"></div></div><h3>Registrar atividade</h3><div class="field"><label>Tipo</label><select name="activityType">${crmActivityTypes.map(t=>'<option>'+t+'</option>').join('')}</select></div><div class="field"><label>O que aconteceu</label><textarea name="activity" rows="3" placeholder="Descreva o acordo, proposta enviada, retorno ou cobrança realizada."></textarea></div><label class="crm-check"><input type="checkbox" name="contactDone"> Registrar lembrete atual como atendido</label><p class="hint">Ao agendar outra data, um novo lembrete fica ativo. Registros de proposta enviada descrevem uma ação realizada por você.</p><div class="row crm-actions"><button class="btn primary">Salvar negociação</button><button type="button" class="btn" onclick="crmCustomerHistory(${d.id})">Histórico do cliente</button><button type="button" class="btn" onclick="convertDeal(${d.id})" ${Number(d.stage)===4?'disabled':''}>${d.orderId?'Ver pedido':'Converter em pedido'}</button></div></form><h3 style="margin-top:25px">Histórico desta oportunidade</h3>${crmHistoryMarkup([d])}`,'',true)};
-saveDeal=function(id,f){if(!adminSession)return;const stage=Number(crmFormValue(f,'stage')),value=Number(crmFormValue(f,'value')),notes=crmFormValue(f,'notes'),lossReason=crmFormValue(f,'lossReason'),nextContact=crmFormValue(f,'nextContact'),reminderText=crmFormValue(f,'reminderText'),activity=crmFormValue(f,'activity'),type=crmFormValue(f,'activityType'),done=!!f.elements.namedItem('contactDone')?.checked;if(!notes||!crmStages[stage]||!Number.isFinite(value)||value<0)return toast('Confira produtos, valor e etapa.');if(stage===4&&!lossReason)return toast('Informe o motivo da venda não fechada.');if(nextContact&&!Number.isFinite(Date.parse(nextContact)))return toast('Confira a data do próximo contato.');if(crmUpdate(id,d=>{d.history=d.history||[];if(Number(d.stage)!==stage)d.history.push(crmEvent('Etapa alterada',crmStages[d.stage]+' → '+crmStages[stage]));if(d.notes!==notes)d.history.push(crmEvent('Oferta atualizada','Antes: '+(d.notes||'Não informado')+'\nAgora: '+notes));if(Number(d.value)!==value)d.history.push(crmEvent('Valor negociado',money(d.value)+' → '+money(value)));if(d.lossReason!==lossReason&&lossReason)d.history.push(crmEvent('Motivo do não fechamento',lossReason));const rescheduled=d.nextContact!==nextContact||d.reminderText!==reminderText;if(rescheduled){d.history.push(crmEvent(nextContact?'Retorno agendado':'Agendamento removido',nextContact?crmDate(nextContact)+' · '+reminderText:'Sem novo contato agendado'));d.reminderDone=false}if(activity)d.history.push(crmEvent(crmActivityTypes.includes(type)?type:'Observação',activity));if(done&&!rescheduled){d.reminderDone=true;d.history.push(crmEvent('Lembrete atendido',activity||'Retorno registrado pelo administrador.'))}Object.assign(d,{stage,value,notes,lossReason,nextContact,reminderText,updatedAt:new Date().toISOString()})})){closeModal();render();toast('Negociação e histórico atualizados.')}};
+saveDeal=async function(id,f){if(!adminSession)return;const stage=Number(crmFormValue(f,'stage')),value=Number(crmFormValue(f,'value')),notes=crmFormValue(f,'notes'),lossReason=crmFormValue(f,'lossReason'),nextContact=crmFormValue(f,'nextContact'),reminderText=crmFormValue(f,'reminderText'),activity=crmFormValue(f,'activity'),type=crmFormValue(f,'activityType'),done=!!f.elements.namedItem('contactDone')?.checked;if(!notes||!crmStages[stage]||!Number.isFinite(value)||value<0)return toast('Confira produtos, valor e etapa.');if(stage===4&&!lossReason)return toast('Informe o motivo da venda não fechada.');if(nextContact&&!Number.isFinite(Date.parse(nextContact)))return toast('Confira a data do próximo contato.');if(await crmUpdate(id,d=>{d.history=d.history||[];if(Number(d.stage)!==stage)d.history.push(crmEvent('Etapa alterada',crmStages[d.stage]+' → '+crmStages[stage]));if(d.notes!==notes)d.history.push(crmEvent('Oferta atualizada','Antes: '+(d.notes||'Não informado')+'\nAgora: '+notes));if(Number(d.value)!==value)d.history.push(crmEvent('Valor negociado',money(d.value)+' → '+money(value)));if(d.lossReason!==lossReason&&lossReason)d.history.push(crmEvent('Motivo do não fechamento',lossReason));const rescheduled=d.nextContact!==nextContact||d.reminderText!==reminderText;if(rescheduled){d.history.push(crmEvent(nextContact?'Retorno agendado':'Agendamento removido',nextContact?crmDate(nextContact)+' · '+reminderText:'Sem novo contato agendado'));d.reminderDone=false}if(activity)d.history.push(crmEvent(crmActivityTypes.includes(type)?type:'Observação',activity));if(done&&!rescheduled){d.reminderDone=true;d.history.push(crmEvent('Lembrete atendido',activity||'Retorno registrado pelo administrador.'))}Object.assign(d,{stage,value,notes,lossReason,nextContact,reminderText,updatedAt:new Date().toISOString()})})){closeModal();render();toast('Negociação e histórico atualizados.')}};
 const convertDealBeforeHistory=convertDeal;
 convertDeal=function(id){if(!adminSession)return;const d=state.deals.find(x=>String(x.id)===String(id));if(!d||Number(d.stage)===4)return toast('Reabra a negociação antes de converter em pedido.');if(d.orderId)return convertDealBeforeHistory(id);const oldStage=d.stage;convertDealBeforeHistory(id);if(d.orderId){crmUpdate(id,x=>{x.history=x.history||[];x.history.push(crmEvent('Venda concluída','Etapa anterior: '+crmStages[oldStage]+'. Convertida em pedido #'+x.orderId+' · '+money(x.value)));x.reminderDone=true});const o=state.orders.find(o=>String(o.id)===String(d.orderId));if(o){o.spec=d.notes||o.spec;o.customerId=d.customerId||o.customerId;persist()}}};
 function crmContacts(){const result=[];const add=(name,company,id='')=>{if(!name)return;const key=id?'id:'+id:'name:'+String(name).trim().toLowerCase()+'|'+String(company||'').trim().toLowerCase();if(!result.some(c=>c.key===key))result.push({name,company:company||'',key})};customerAccounts.forEach(c=>add(c.fullName||c.legalName||c.email,c.legalName||c.company,c.id));state.deals.forEach(d=>add(d.person,d.company,d.customerId));state.clients.forEach(c=>add(c.name,c.company));state.orders.forEach(o=>add(o.client,o.company,o.customerId));return result}
@@ -2951,7 +2951,7 @@ window.riseSupabaseBridge=(function(){
   const productIdsFor=async items=>{const legacy=[...new Set(items.map(item=>String(item.id||'')).filter(Boolean))];if(!legacy.length)return {};const {data,error}=await window.riseSupabase.from('products').select('id,legacy_id').in('legacy_id',legacy);if(error)throw error;return Object.fromEntries((data||[]).map(product=>[product.legacy_id,product.id]))};
   const uploadArtworkRecord=async(orderId,orderItemId,customerId,reference,position)=>{const record=await artworkRead(reference.key);if(!record?.data)return;const blob=await (await fetch(record.data)).blob();const safeName=String(record.name||`arte-${position+1}`).replace(/[^a-zA-Z0-9._-]+/g,'-');const path=`${customerId}/${orderId}/artworks/${Date.now()}-${position+1}-${safeName}`;const {error:uploadError}=await window.riseSupabase.storage.from('rise-order-files').upload(path,blob,{contentType:record.type||blob.type||'application/octet-stream',upsert:false});if(uploadError)throw uploadError;const {error}=await window.riseSupabase.from('order_artworks').insert({order_item_id:orderItemId,uploaded_by:customerId,bucket_path:path,file_name:record.name||safeName,mime_type:record.type||blob.type||'',artwork_role:'reference',position});if(error)throw error};
   const publishOrder=async localOrder=>{const {data:{user}}=await window.riseSupabase.auth.getUser();if(!user)throw Error('Entre na sua conta para salvar o pedido em todos os aparelhos.');const productIds=await productIdsFor(localOrder.items||[]);const {data:order,error}=await window.riseSupabase.from('orders').insert({customer_id:user.id,customer_name:localOrder.client||'',customer_company:localOrder.company||'',customer_email:localOrder.email||user.email||'',customer_phone:localOrder.phone||'',status:'Pedido recebido',payment_status:'pending',total:Number(localOrder.total||0),shipping_amount:Number(localOrder.freight||0),shipping_address:localOrder.shippingAddress||{},delivery_method:localOrder.deliveryMethod||'',customer_notes:localOrder.address||''}).select().single();if(error)throw error;const itemRows=(localOrder.items||[]).map(item=>({order_id:order.id,product_id:productIds[String(item.id)]||null,product_name:item.name||'',quantity:Number(item.configuration?.quantity||1),unit_price:Number(item.total||0),configuration:{...item.configuration,legacy_product_id:item.id,spec:item.spec,preview_image:item.previewImage,design:item.design,supplier:item.supplier},artwork_notes:''}));if(itemRows.length){const {data:remoteItems,error:itemError}=await window.riseSupabase.from('order_items').insert(itemRows).select();if(itemError)throw itemError;for(let i=0;i<remoteItems.length;i++){const refs=(localOrder.items[i]?.artworkReferences||[]);for(let p=0;p<refs.length;p++)await uploadArtworkRecord(order.id,remoteItems[i].id,user.id,refs[p],p)}}return order};
-  const loadRemoteOrders=async()=>{await loadCloudCustomerNotices().catch(error=>console.warn('Notificações indisponíveis.',error));const {data,error}=await window.riseSupabase.from('orders').select('*,order_items(*,order_artworks(id,bucket_path,file_name,mime_type,position,artwork_role))').order('created_at',{ascending:false});if(error)throw error;if(!data?.length)return false;state.orders=data.map(order=>({id:String(order.order_number),remoteId:order.id,customerId:order.customer_id,client:order.customer_name,company:order.customer_company,email:order.customer_email,phone:order.customer_phone,product:(order.order_items||[]).map(item=>item.product_name).join(', '),spec:(order.order_items||[]).map(item=>item.configuration?.spec||'').filter(Boolean).join(' / '),items:(order.order_items||[]).map(item=>({id:item.configuration?.legacy_product_id||0,name:item.product_name,key:item.id,total:Number(item.unit_price||0),configuration:item.configuration||{},spec:item.configuration?.spec||'',artworkReferences:(item.order_artworks||[]).filter(art=>art.artwork_role==='reference').sort((a,b)=>a.position-b.position).map(art=>({key:'cloud-art:'+art.id,path:art.bucket_path,name:art.file_name,type:art.mime_type}))})),total:Number(order.total||0),freight:Number(order.shipping_amount||0),status:order.status,deliveryMethod:order.delivery_method,date:new Date(order.created_at).toLocaleDateString('pt-BR'),createdAt:order.created_at,address:order.customer_notes,shippingAddress:order.shipping_address,trackingCode:order.tracking_code,tracking:order.tracking_code,notes:adminSession?order.internal_notes:'',paymentStatus:order.payment_status,productionStartDate:order.production_start_date||'',productionDueDate:order.production_due_date||'',expectedDeliveryDate:order.expected_delivery_date||''}));try{persist()}catch{};return true};
+  const loadRemoteOrders=async()=>{await loadCommercialData().catch(error=>console.warn("CRM indisponível.",error));await loadCloudCustomerNotices().catch(error=>console.warn('Notificações indisponíveis.',error));const {data,error}=await window.riseSupabase.from('orders').select('*,order_items(*,final_art_reviews(*),order_artworks(id,bucket_path,file_name,mime_type,position,artwork_role))').order('created_at',{ascending:false});if(error)throw error;if(!data?.length)return false;state.orders=data.map(order=>({id:String(order.order_number),remoteId:order.id,customerId:order.customer_id,finalArtByItem:readFinalArtReviews(order.order_items||[],order.customer_id),client:order.customer_name,company:order.customer_company,email:order.customer_email,phone:order.customer_phone,product:(order.order_items||[]).map(item=>item.product_name).join(', '),spec:(order.order_items||[]).map(item=>item.configuration?.spec||'').filter(Boolean).join(' / '),items:(order.order_items||[]).map(item=>({id:item.configuration?.legacy_product_id||0,name:item.product_name,key:item.id,total:Number(item.unit_price||0),configuration:item.configuration||{},spec:item.configuration?.spec||'',artworkReferences:(item.order_artworks||[]).filter(art=>art.artwork_role==='reference').sort((a,b)=>a.position-b.position).map(art=>({key:'cloud-art:'+art.id,path:art.bucket_path,name:art.file_name,type:art.mime_type}))})),total:Number(order.total||0),freight:Number(order.shipping_amount||0),status:order.status,deliveryMethod:order.delivery_method,date:new Date(order.created_at).toLocaleDateString('pt-BR'),createdAt:order.created_at,address:order.customer_notes,shippingAddress:order.shipping_address,trackingCode:order.tracking_code,tracking:order.tracking_code,notes:adminSession?order.internal_notes:'',paymentStatus:order.payment_status,reviewDecision:order.review_decision||'Aguardando análise',reviewReason:order.review_reason||'',reviewHistory:order.review_history||[],productionStartDate:order.production_start_date||'',productionDueDate:order.production_due_date||'',expectedDeliveryDate:order.expected_delivery_date||''}));try{persist()}catch{};return true};
   const attachProfile=profile=>{const details=profile.details||{};if(profile.role==='admin'){adminSession=true;try{sessionStorage.setItem('rise-admin-session','supabase')}catch{};return profile}const account={...details,id:profile.id,email:profile.email,fullName:profile.full_name||details.fullName||'',legalName:profile.company_name||details.legalName||'',mobile:profile.phone||details.mobile||'',address:details.address||{}};const found=customerAccounts.findIndex(x=>x.id===account.id);if(found>=0)customerAccounts[found]={...customerAccounts[found],...account};else customerAccounts.push(account);signedCustomerId=account.id;try{sessionStorage.setItem('rise-customer-session',account.id)}catch{}return account};
   const signIn=async(form,adminOnly=false)=>{const email=String(form.email?.value||'').trim().toLowerCase(),password=String(form.password?.value||'');const button=form.querySelector('button[type="submit"]');if(button)button.disabled=true;try{const {data,error:authError}=await window.riseSupabase.auth.signInWithPassword({email,password});if(authError)throw authError;const profile=await profileQuery(data.user);if(adminOnly&&profile.role!=='admin'){await window.riseSupabase.auth.signOut();throw Error('Este e-mail não possui acesso administrativo.')}attachProfile(profile);await Promise.allSettled([loadRemoteCart(),loadRemoteOrders()]);form.password.value='';const isAdmin=profile.role==='admin';const destination=(adminOnly||isAdmin)?(navs.some(n=>n[0]===adminReturn)?adminReturn:'dashboard'):(authReturn==='checkout'?'shop':'account');go(destination);toast((adminOnly||isAdmin)?'Bem-vindo ao administrativo da RISE.':'Acesso realizado com sucesso.')}catch(error){err(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message||'Não foi possível entrar.')}finally{if(button)button.disabled=false}};
   const signUpAdmin=async()=>{const form=document.querySelector('.admin-login-card form');if(!form||!window.riseSupabase)return;const email=String(form.email.value||'').trim().toLowerCase(),password=String(form.password.value||'');if(email!==masterEmail)return err('Use o e-mail administrador da RISE.');if(password.length<8)return err('Crie uma senha com pelo menos 8 caracteres.');const {error}=await window.riseSupabase.auth.signUp({email,password,options:{data:{full_name:'RISE Comunicação Visual'}}});if(error)return err(error.message);err('Confira o e-mail da RISE para confirmar o primeiro acesso. Depois entre normalmente.');};
@@ -3472,7 +3472,10 @@ artworkRead = async function (key) {
   const customerId = currentCustomer()?.id;
   const ref = state.orders
     .filter(order => adminSession || (customerId && order.customerId === customerId))
-    .flatMap(order => (order.items || []).flatMap(item => item.artworkReferences || []))
+    .flatMap(order => (order.items || []).flatMap(item => {
+      const art = finalArtForProduct(order,item.key);
+      return [...(item.artworkReferences || []),...(adminSession || art.publishedAt ? art.options : [])];
+    }))
     .find(item => item.key === key);
   if (!ref?.path || !/^image\/(jpeg|png|webp|gif)$/.test(ref.type)) return null;
   const {data,error} = await window.riseSupabase.storage.from('rise-order-files').download(ref.path);
@@ -3547,6 +3550,8 @@ saveOrder = async function (id) {
     const {error} = await window.riseSupabase.from('orders').update({
       status:changed.status,tracking_code:changed.tracking || '',delivery_status:deliveryStatus,
       shipping_amount:changed.freight,total:changed.total,
+      review_decision:changed.reviewDecision || null,review_reason:changed.reviewReason || null,
+      review_history:changed.reviewHistory || [],
       production_start_date:changed.productionStartDate || null,
       production_due_date:changed.productionDueDate || null,
       expected_delivery_date:changed.expectedDeliveryDate || null
@@ -3703,6 +3708,302 @@ const showcaseRequest = (async () => {
   showcaseReady = true;
   if (state.view === 'shop' && !document.getElementById('overlay')?.innerHTML) render();
 })();
+function readFinalArtReviews(items, customerId) {
+  return Object.fromEntries(items.flatMap(item => {
+    const review = item.final_art_reviews;
+    if (!review) return [];
+    const options = review.options.filter(Boolean).map(option => ({...option,key:'cloud-art:'+option.path}));
+    const selected = options.find(option => option.id === review.approved_slot);
+    return [[item.id,{revision:review.revision,options,publishedAt:review.published_at,
+      approval:selected ? {optionId:selected.id,key:selected.key,revision:review.revision,
+        at:review.approved_at,customerId} : null}]];
+  }));
+}
+function cloudFinalArtOrder(id) {
+  return state.orders.find(order => order.remoteId && String(order.id) === String(id));
+}
+const localArtMode = usesPerProductArt;
+usesPerProductArt = order => order?.remoteId ? Boolean(order.items?.length) : localArtMode(order);
+const localArtUpload = uploadFinalProductionArt;
+uploadFinalProductionArt = async function(input) {
+  const {orderId,itemKey,optionId} = input.dataset;
+  const order = cloudFinalArtOrder(orderId);
+  if (!order) return localArtUpload(input);
+  const slot = Number(optionId), file = input.files?.[0], token = productArtToken(orderId,itemKey);
+  if (!adminSession || !finalArtProduct(order,itemKey) || productArtLocked(order,itemKey) ||
+      finalArtUploads.has(token) || ![0,1,2].includes(slot) || !file) return;
+  const extension = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'}[file.type];
+  if (!extension) return toast('Use JPG, PNG, WebP ou GIF.');
+  finalArtUploads.add(token);
+  input.disabled = true;
+  const client = window.riseSupabase;
+  try {
+    const {data,error} = await client.auth.getUser();
+    if (error || !data?.user) throw error || Error('Sessão indisponível.');
+    const path = [data.user.id,'final-art',itemKey,crypto.randomUUID()+'.'+extension].join('/');
+    const bucket = client.storage.from('rise-order-files');
+    const uploaded = await bucket.upload(path,file,{contentType:file.type});
+    if (uploaded.error) throw uploaded.error;
+    const art = finalArtForProduct(order,itemKey);
+    const options = [0,1,2].map(index => {
+      if (index === slot) return {id:slot,path,name:file.name,type:file.type};
+      const option = art.options.find(item => item.id === index);
+      return option ? {id:index,path:option.path,name:option.name,type:option.type} : null;
+    });
+    const table = client.from('final_art_reviews');
+    const values = {revision:art.revision+1, options, published_at:null};
+    const request = art.revision
+      ? table.update(values).eq('order_item_id',itemKey).eq('revision',art.revision).is('approved_at',null)
+      : table.insert({...values,order_item_id:itemKey});
+    const saved = await request.select('order_item_id').single();
+    if (saved.error) throw saved.error;
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    toast('Arte salva no pedido.');
+  } catch (error) {
+    toast('Não foi possível sincronizar a arte: '+error.message);
+  } finally {
+    finalArtUploads.delete(token);
+    input.value = '';
+    input.disabled = false;
+    refreshFinalArtCard(orderId);
+  }
+};
+const localPublishArt = publishProductFinalArts;
+publishProductFinalArts = async function(id,key) {
+  const order = cloudFinalArtOrder(id);
+  if (!order) return localPublishArt(id,key);
+  const token = productArtToken(id,key);
+  const art = finalArtForProduct(order,key);
+  if (!adminSession || productArtLocked(order,key) || art.publishedAt ||
+      art.options.length !== 3 || finalArtUploads.has(token)) return;
+  finalArtUploads.add(token);
+  try {
+    const {error} = await window.riseSupabase.from('final_art_reviews')
+      .update({published_at:new Date().toISOString()}).eq('order_item_id',key)
+      .eq('revision',art.revision).is('published_at',null).select('order_item_id').single();
+    if (error) throw error;
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    toast('Três opções publicadas para o cliente.');
+  } catch (error) {
+    toast('Não foi possível confirmar a publicação: '+error.message);
+  } finally {
+    finalArtUploads.delete(token);
+    refreshFinalArtCard(id);
+  }
+};
+const localConfirmArt = confirmProductFinalArt;
+confirmProductFinalArt = async function(id,key) {
+  if (!cloudFinalArtOrder(id)) return localConfirmArt(id,key);
+  const token = productArtToken(id,key);
+  const choice = finalArtSelections.get(token);
+  if (!currentCustomer() || !choice || finalArtUploads.has(token)) return;
+  finalArtUploads.add(token);
+  try {
+    const {error} = await window.riseSupabase.rpc('approve_rise_final_art',{
+      item_id:key,expected_revision:choice.revision,chosen_slot:choice.optionId});
+    if (error) throw error;
+    finalArtSelections.delete(token);
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    toast('Arte confirmada no pedido.');
+  } catch (error) {
+    toast('Não foi possível confirmar a arte: '+error.message);
+  } finally {
+    finalArtUploads.delete(token);
+    refreshFinalArtCard(id);
+  }
+};
+const localWhatsAppApproval = confirmAdminWhatsAppArt;
+confirmAdminWhatsAppArt = async function(button) {
+  const {orderId,itemKey} = button.dataset;
+  const order = cloudFinalArtOrder(orderId);
+  if (!order) return localWhatsAppApproval(button);
+  const panel = button.closest('.whatsapp-art-approval');
+  const choice = adminWhatsAppArtChoices.get(whatsappArtChoiceKey(orderId,itemKey));
+  if (!adminSession || !panel?.querySelector('.whatsapp-art-attestation')?.checked || !choice)
+    return toast('Escolha a opção confirmada pelo cliente e confira a declaração.');
+  button.disabled = true;
+  try {
+    const {error} = await window.riseSupabase.rpc('approve_rise_final_art',{
+      item_id:itemKey,expected_revision:choice.revision,chosen_slot:choice.optionId,via_whatsapp:true});
+    if (error) throw error;
+    adminWhatsAppArtChoices.delete(whatsappArtChoiceKey(orderId,itemKey));
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    await orderDetail(orderId);
+    toast('Aprovação registrada no pedido.');
+  } catch (error) { toast('Não foi possível registrar a aprovação: '+error.message); }
+  finally { button.disabled = false; }
+};
+let remoteKitQuotes = [];
+let remoteDealRevisions = new Map();
+async function loadCommercialData() {
+  if (!adminSession) return;
+  const client = window.riseSupabase;
+  const [quotes,deals,clients] = await Promise.all([
+    client.from('rise_kit_quotes').select('*,orders(order_number)').order('created_at',{ascending:false}),
+    client.from('rise_crm_deals').select('id,payload,revision').order('id',{ascending:true}),
+    client.from('profiles').select('id,email,full_name,company_name,phone').eq('role','customer')
+  ]);
+  if (quotes.error) throw quotes.error;
+  if (deals.error) throw deals.error;
+  remoteKitQuotes = quotes.data.map(row => ({...row.payload,id:row.id,customerId:row.customer_id,
+    createdAt:row.created_at,readAt:row.read_at,outcomeAt:row.filtered_at,status:row.filtered_at?'filtered':'new',
+    orderId:row.orders?.order_number,remote:true}));
+  const old = state.deals.filter(deal => !remoteDealRevisions.has(Number(deal.id)) &&
+    !deals.data.some(row => Number(row.id) === Number(deal.id)));
+  remoteDealRevisions = new Map(deals.data.map(row => [Number(row.id),row.revision]));
+  state.deals = [...old,...deals.data.map(row => ({...row.payload,id:Number(row.id)}))];
+  for (const profile of clients.data || []) {
+    if (!customerAccounts.some(customer => customer.id === profile.id))
+      customerAccounts.push({id:profile.id,email:profile.email,fullName:profile.full_name,
+        legalName:profile.company_name,mobile:profile.phone});
+  }
+}
+const localKitQuotes = kitQuoteRecords;
+kitQuoteRecords = () => adminSession && window.riseSupabase
+  ? [...remoteKitQuotes,...localKitQuotes().filter(q=>!q.remote)] : localKitQuotes();
+const localKitRequest = kitRecordRequest;
+kitRecordRequest = async function(t,blob) {
+  const customer = currentCustomer();
+  if (!window.riseSupabase) return localKitRequest(t,blob);
+  if (!customer) return null;
+  const id = 'kit-'+crypto.randomUUID();
+  const bucket = window.riseSupabase.storage.from('rise-order-files');
+  const uploaded = [];
+  const put = async (file,name) => {
+    const object = [customer.id,'quotes',id,name].join('/');
+    const {error} = await bucket.upload(object,file,{contentType:file.type});
+    if (error) throw error;
+    uploaded.push(object);
+    return object;
+  };
+  try {
+    const imagePath = await put(blob, 'quote.png');
+    const references = [];
+    for (const [index, reference] of quickKit.references.entries()) {
+      const file = await (await fetch(reference.data)).blob();
+      references.push({path:await put(file,'reference-'+index),name:reference.name,type:file.type});
+    }
+    const items = t.lines.map(line => {
+      const {costTotal,markup,source,...selection} = line.r;
+      return {id:line.p.id,name:line.p.name,configuration:kitRowLabel(line.r),
+        selection,count:line.count,sale:line.sale,design:line.design,productionDays:line.p.days};
+    });
+    const payload = {contact:{name:customer.fullName||customer.tradeName||customer.contactName||'',
+      email:customer.email,phone:customer.mobile||customer.phone||''},items,
+      sale:t.sale,design:t.design,freight:t.freight,total:t.total,support:t.support,
+      economic:t.economic,cep:quickKit.cep,colors:[...quickKit.colors],keepColors:quickKit.keepColors,
+      comment:quickKit.comment,referenceCount:references.length,references,imagePath,
+      registrationBenefitRequested:kitRegistrationBenefit};
+    const {error} = await window.riseSupabase.from('rise_kit_quotes')
+      .insert({id,customer_id:customer.id,payload});
+    if (error) throw error;
+    return {id,...payload};
+  } catch (error) {
+    if (uploaded.length) await bucket.remove(uploaded).catch(()=>{});
+    throw error;
+  }
+};
+const localKitMedia = kitReadRequestMedia;
+kitReadRequestMedia = async function(id) {
+  const quote = remoteKitQuotes.find(item=>item.id===id);
+  if (!quote) return localKitMedia(id);
+  if (!adminSession) return null;
+  const bucket = window.riseSupabase.storage.from('rise-order-files');
+  const prefix = [quote.customerId,'quotes',quote.id,''].join('/');
+  const download = async path => {
+    if (typeof path !== 'string' || !path.startsWith(prefix) || path.slice(prefix.length).includes('/'))
+      throw Error('Arquivo do orçamento inválido.');
+    const {data,error} = await bucket.download(path);
+    if (error) throw error;
+    return data;
+  };
+  const [image,...references] = await Promise.all([download(quote.imagePath),
+    ...(quote.references || []).map(async ref=>({name:ref.name,data:await readDataFile(await download(ref.path))}))]);
+  return {image,references};
+};
+const localKitUpdate = kitUpdateRequest;
+kitUpdateRequest = async function(id,change) {
+  const quote = remoteKitQuotes.find(item=>item.id===id);
+  if (!quote) return localKitUpdate(id,change);
+  if (!adminSession) return false;
+  try {
+    const updated = structuredClone(quote);
+    change(updated);
+    const {error} = await window.riseSupabase.from('rise_kit_quotes')
+      .update({read_at:updated.readAt,filtered_at:updated.outcomeAt||null})
+      .eq('id',id).select('id').single();
+    if (error) throw error;
+    await loadCommercialData();
+    render();
+    openKitRequests();
+    return true;
+  } catch (error) {
+    toast('Não foi possível salvar o orçamento: '+error.message);
+    return false;
+  }
+};
+const localKitConvert = kitPositivateRequest;
+kitPositivateRequest = async function(id) {
+  if (!remoteKitQuotes.some(item=>item.id===id)) return localKitConvert(id);
+  if (!adminSession || kitConversionsBusy.has(id)) return;
+  kitConversionsBusy.add(id);
+  try {
+    const {data,error} = await window.riseSupabase.rpc('convert_rise_kit_quote',{quote_id:id});
+    if (error) throw error;
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    render();
+    openKitRequests();
+    toast('Pedido #'+data+' criado para análise.');
+  } catch (error) {
+    toast('Não foi possível converter o orçamento: '+error.message);
+  } finally { kitConversionsBusy.delete(id); }
+};
+const localCrmCommit = crmCommit;
+let remoteCrmSaving = false;
+crmCommit = async function(deals) {
+  if (!window.riseSupabase) return localCrmCommit(deals);
+  if (!adminSession || remoteCrmSaving) return false;
+  const changed = deals.filter(deal=>JSON.stringify(deal)!==JSON.stringify(state.deals.find(old=>old.id===deal.id)));
+  if (!changed.length) return true;
+  if (changed.length!==1) return false;
+  const [deal] = changed;
+  const revision = remoteDealRevisions.get(Number(deal.id));
+  remoteCrmSaving = true;
+  try {
+    const table = window.riseSupabase.from('rise_crm_deals');
+    const request = revision
+      ? table.update({payload:deal,revision:revision+1,updated_at:new Date().toISOString()})
+        .eq('id',deal.id).eq('revision',revision)
+      : table.insert({id:deal.id,payload:deal});
+    const {data,error} = await request.select('revision').single();
+    if (error) throw error;
+    state.deals = deals;
+    remoteDealRevisions.set(Number(deal.id),data.revision);
+    return true;
+  } catch (error) {
+    toast('Não foi possível sincronizar a negociação: '+error.message);
+    return false;
+  } finally { remoteCrmSaving = false; }
+};
+const localCrmConvert = convertDeal;
+convertDeal = async function(id) {
+  if (!window.riseSupabase) return localCrmConvert(id);
+  if (!adminSession || remoteCrmSaving) return;
+  const deal = state.deals.find(item=>String(item.id)===String(id));
+  if (!deal) return;
+  if (deal.orderId) return orderDetail(deal.orderId);
+  if (!remoteDealRevisions.has(Number(id))) return toast('Salve a negociação no painel antes de converter.');
+  remoteCrmSaving = true;
+  try {
+    const {data,error} = await window.riseSupabase.rpc('convert_rise_crm_deal',{deal_id:id});
+    if (error) throw error;
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    render();
+    orderDetail(data);
+  } catch (error) {
+    toast('Não foi possível converter a negociação: '+error.message);
+  } finally { remoteCrmSaving = false; }
+};
 const sharedPricesRequest = loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
 const sharedCatalogOrderRequest = loadPublishedCatalogOrder().catch(error => console.warn("Ordem compartilhada indisponível.",error));
 const sharedDeliveryRequest = loadPublishedDelivery().catch(error => console.warn('Frete compartilhado indisponível.',error));
