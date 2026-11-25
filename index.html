@@ -506,6 +506,26 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 /* Blend catalogue-category photos into their own pastel tile instead of a white rectangle. */
 .retail-category .retail-category-image{isolation:isolate}
 .retail-category .retail-category-image>img{background:transparent!important;mix-blend-mode:multiply;object-fit:contain;opacity:1}
+@media (max-width:760px) {
+  .retail-home .retail-categories {
+    display:grid;
+    grid-template-columns:none;
+    grid-auto-flow:column;
+    grid-auto-columns:calc((100% - 24px) / 3);
+    gap:12px;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    overscroll-behavior-x:contain;
+  }
+  .retail-home .retail-categories > .retail-category {
+    min-width:0;
+    scroll-snap-align:start;
+    overflow-wrap:anywhere;
+  }
+  .retail-home .retail-categories > .retail-category:focus-visible {
+    outline-offset:-3px;
+  }
+}
 
 .kit-product{position:relative}.kit-product:has(.kit-customer-photo-tools){padding-top:43px}
 .kit-customer-photo-tools{position:absolute;top:10px;right:12px;display:flex;align-items:center;gap:10px;font-size:10px}
