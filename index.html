@@ -2753,6 +2753,14 @@ kitSelected = function () {
   });
 };
 const saveProductBeforeMediaSync = saveProduct;
+let publicCoversReady = location.protocol === 'file:';
+const retailVisualBeforeCoverLoad = retailProductVisual;
+retailProductVisual = function (product, unique) {
+  if (!publicCoversReady || !catalogCoverPhoto(product)) {
+    return '<div class="art catalog-cover-frame" aria-hidden="true"></div>';
+  }
+  return retailVisualBeforeCoverLoad(product, unique);
+};
 const pendingProductMedia = new Set();
 let productMediaSaveQueue = Promise.resolve();
 saveProduct = async function (id, form) {
@@ -2825,6 +2833,8 @@ try {
   console.warn('Catálogo remoto indisponível. Carregando as demais áreas da loja.', error);
 }
 await window.riseSupabaseBridge.loadSharedProductMedia();
+publicCoversReady = true;
+if (state.view === 'shop' && !document.getElementById('overlay')?.innerHTML) render();
 await Promise.all([sharedPricesRequest, sharedContentRequest, showcaseRequest]);
 const sessionResult=await window.riseSupabase.auth.getSession();
 if(riseRecoveryLink&&sessionResult.data.session){window.riseSupabaseBridge.openPasswordRecovery()}else if(sessionResult.data.session){try{const profile=await window.riseSupabaseBridge.profileQuery(sessionResult.data.session.user);window.riseSupabaseBridge.attachProfile(profile);await Promise.allSettled([window.riseSupabaseBridge.loadRemoteCart(),window.riseSupabaseBridge.loadRemoteOrders()]);if(profile.role==='admin')window.riseSupabaseBridge.syncCatalog().then(()=>window.riseSupabaseBridge.syncLocalProductMedia()).then(count=>{if(count)console.info(`Galeria RISE sincronizada: ${count} produto(s).`)}).catch(error=>console.warn('Não foi possível sincronizar o catálogo local.',error));render()}catch(error){console.warn('Não foi possível restaurar a sessão RISE.',error)}}else render();
