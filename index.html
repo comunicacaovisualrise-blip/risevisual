@@ -2923,7 +2923,7 @@ window.riseSupabaseBridge=(function(){
   const productIdsFor=async items=>{const legacy=[...new Set(items.map(item=>String(item.id||'')).filter(Boolean))];if(!legacy.length)return {};const {data,error}=await window.riseSupabase.from('products').select('id,legacy_id').in('legacy_id',legacy);if(error)throw error;return Object.fromEntries((data||[]).map(product=>[product.legacy_id,product.id]))};
   const uploadArtworkRecord=async(orderId,orderItemId,customerId,reference,position)=>{const record=await artworkRead(reference.key);if(!record?.data)return;const blob=await (await fetch(record.data)).blob();const safeName=String(record.name||`arte-${position+1}`).replace(/[^a-zA-Z0-9._-]+/g,'-');const path=`${customerId}/${orderId}/artworks/${Date.now()}-${position+1}-${safeName}`;const {error:uploadError}=await window.riseSupabase.storage.from('rise-order-files').upload(path,blob,{contentType:record.type||blob.type||'application/octet-stream',upsert:false});if(uploadError)throw uploadError;const {error}=await window.riseSupabase.from('order_artworks').insert({order_item_id:orderItemId,uploaded_by:customerId,bucket_path:path,file_name:record.name||safeName,mime_type:record.type||blob.type||'',artwork_role:'reference',position});if(error)throw error};
   const publishOrder=async localOrder=>{const {data:{user}}=await window.riseSupabase.auth.getUser();if(!user)throw Error('Entre na sua conta para salvar o pedido em todos os aparelhos.');const productIds=await productIdsFor(localOrder.items||[]);const {data:order,error}=await window.riseSupabase.from('orders').insert({customer_id:user.id,customer_name:localOrder.client||'',customer_company:localOrder.company||'',customer_email:localOrder.email||user.email||'',customer_phone:localOrder.phone||'',status:'Pedido recebido',payment_status:'pending',total:Number(localOrder.total||0),shipping_amount:Number(localOrder.freight||0),shipping_address:localOrder.shippingAddress||{},delivery_method:localOrder.deliveryMethod||'',customer_notes:localOrder.address||''}).select().single();if(error)throw error;const itemRows=(localOrder.items||[]).map(item=>({order_id:order.id,product_id:productIds[String(item.id)]||null,product_name:item.name||'',quantity:Number(item.configuration?.quantity||1),unit_price:Number(item.total||0),configuration:{...item.configuration,legacy_product_id:item.id,spec:item.spec,preview_image:item.previewImage,design:item.design,supplier:item.supplier},artwork_notes:''}));if(itemRows.length){const {data:remoteItems,error:itemError}=await window.riseSupabase.from('order_items').insert(itemRows).select();if(itemError)throw itemError;for(let i=0;i<remoteItems.length;i++){const refs=(localOrder.items[i]?.artworkReferences||[]);for(let p=0;p<refs.length;p++)await uploadArtworkRecord(order.id,remoteItems[i].id,user.id,refs[p],p)}}return order};
-  const loadRemoteOrders=async()=>{const {data,error}=await window.riseSupabase.from('orders').select('*,order_items(*)').order('created_at',{ascending:false});if(error)throw error;if(!data?.length)return false;state.orders=data.map(order=>({id:String(order.order_number),remoteId:order.id,customerId:order.customer_id,client:order.customer_name,company:order.customer_company,email:order.customer_email,phone:order.customer_phone,product:(order.order_items||[]).map(item=>item.product_name).join(', '),spec:(order.order_items||[]).map(item=>item.configuration?.spec||'').filter(Boolean).join(' / '),items:(order.order_items||[]).map(item=>({id:item.configuration?.legacy_product_id||0,name:item.product_name,key:item.id,total:Number(item.unit_price||0),configuration:item.configuration||{},spec:item.configuration?.spec||'',artworkReferences:[]})),total:Number(order.total||0),freight:Number(order.shipping_amount||0),status:order.status,deliveryMethod:order.delivery_method,date:new Date(order.created_at).toLocaleDateString('pt-BR'),createdAt:order.created_at,address:order.customer_notes,shippingAddress:order.shipping_address,trackingCode:order.tracking_code}));try{persist()}catch{};return true};
+  const loadRemoteOrders=async()=>{await loadCloudCustomerNotices().catch(error=>console.warn('Notificações indisponíveis.',error));const {data,error}=await window.riseSupabase.from('orders').select('*,order_items(*)').order('created_at',{ascending:false});if(error)throw error;if(!data?.length)return false;state.orders=data.map(order=>({id:String(order.order_number),remoteId:order.id,customerId:order.customer_id,client:order.customer_name,company:order.customer_company,email:order.customer_email,phone:order.customer_phone,product:(order.order_items||[]).map(item=>item.product_name).join(', '),spec:(order.order_items||[]).map(item=>item.configuration?.spec||'').filter(Boolean).join(' / '),items:(order.order_items||[]).map(item=>({id:item.configuration?.legacy_product_id||0,name:item.product_name,key:item.id,total:Number(item.unit_price||0),configuration:item.configuration||{},spec:item.configuration?.spec||'',artworkReferences:[]})),total:Number(order.total||0),freight:Number(order.shipping_amount||0),status:order.status,deliveryMethod:order.delivery_method,date:new Date(order.created_at).toLocaleDateString('pt-BR'),createdAt:order.created_at,address:order.customer_notes,shippingAddress:order.shipping_address,trackingCode:order.tracking_code,tracking:order.tracking_code,notes:adminSession?order.internal_notes:'',paymentStatus:order.payment_status}));try{persist()}catch{};return true};
   const attachProfile=profile=>{const details=profile.details||{};if(profile.role==='admin'){adminSession=true;try{sessionStorage.setItem('rise-admin-session','supabase')}catch{};return profile}const account={...details,id:profile.id,email:profile.email,fullName:profile.full_name||details.fullName||'',legalName:profile.company_name||details.legalName||'',mobile:profile.phone||details.mobile||'',address:details.address||{}};const found=customerAccounts.findIndex(x=>x.id===account.id);if(found>=0)customerAccounts[found]={...customerAccounts[found],...account};else customerAccounts.push(account);signedCustomerId=account.id;try{sessionStorage.setItem('rise-customer-session',account.id)}catch{}return account};
   const signIn=async(form,adminOnly=false)=>{const email=String(form.email?.value||'').trim().toLowerCase(),password=String(form.password?.value||'');const button=form.querySelector('button[type="submit"]');if(button)button.disabled=true;try{const {data,error:authError}=await window.riseSupabase.auth.signInWithPassword({email,password});if(authError)throw authError;const profile=await profileQuery(data.user);if(adminOnly&&profile.role!=='admin'){await window.riseSupabase.auth.signOut();throw Error('Este e-mail não possui acesso administrativo.')}attachProfile(profile);await Promise.allSettled([loadRemoteCart(),loadRemoteOrders()]);form.password.value='';const isAdmin=profile.role==='admin';const destination=(adminOnly||isAdmin)?(navs.some(n=>n[0]===adminReturn)?adminReturn:'dashboard'):(authReturn==='checkout'?'shop':'account');go(destination);toast((adminOnly||isAdmin)?'Bem-vindo ao administrativo da RISE.':'Acesso realizado com sucesso.')}catch(error){err(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message||'Não foi possível entrar.')}finally{if(button)button.disabled=false}};
   const signUpAdmin=async()=>{const form=document.querySelector('.admin-login-card form');if(!form||!window.riseSupabase)return;const email=String(form.email.value||'').trim().toLowerCase(),password=String(form.password.value||'');if(email!==masterEmail)return err('Use o e-mail administrador da RISE.');if(password.length<8)return err('Crie uma senha com pelo menos 8 caracteres.');const {error}=await window.riseSupabase.auth.signUp({email,password,options:{data:{full_name:'RISE Comunicação Visual'}}});if(error)return err(error.message);err('Confira o e-mail da RISE para confirmar o primeiro acesso. Depois entre normalmente.');};
@@ -3436,6 +3436,86 @@ addCart=async function(...args){const result=await riseAddCartBeforeCloud(...arg
 const riseRemoveCartBeforeCloud=removeCart;
 removeCart=function(...args){const result=riseRemoveCartBeforeCloud(...args);if(window.riseSupabase)window.riseSupabaseBridge.syncCart().catch(error=>console.warn('Carrinho local preservado; sincronização pendente.',error));return result};
 const riseFinishCheckoutBeforeCloud=finishCheckout;
+let cloudCustomerNotices = [];
+async function loadCloudCustomerNotices() {
+  const customer = currentCustomer();
+  if (!customer) return;
+  const {data,error} = await window.riseSupabase.from('notifications')
+    .select('id,recipient_id,title,body,read_at,created_at')
+    .eq('recipient_id',customer.id).order('created_at',{ascending:false}).limit(100);
+  if (error) throw error;
+  cloudCustomerNotices = (data || []).map(row => ({
+    id:row.id,customerId:row.recipient_id,title:row.title,message:row.body,
+    readAt:row.read_at,createdAt:row.created_at
+  }));
+}
+const noticesBeforeCloud = currentCustomerNotices;
+currentCustomerNotices = function () {
+  const id = currentCustomer()?.id;
+  return [...cloudCustomerNotices.filter(notice => notice.customerId === id),...noticesBeforeCloud()]
+    .sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+};
+const markNoticeBeforeCloud = markCustomerNoticeRead;
+markCustomerNoticeRead = function (id) {
+  const notice = cloudCustomerNotices.find(item => item.id === id && item.customerId === currentCustomer()?.id);
+  if (!notice) return markNoticeBeforeCloud(id);
+  const readAt = new Date().toISOString();
+  window.riseSupabase.from('notifications').update({read_at:readAt})
+    .eq('id',id).eq('recipient_id',notice.customerId).select('id').single()
+    .then(({error}) => {
+      if (error) return toast('Não foi possível marcar a notificação como lida: ' + error.message);
+      notice.readAt = readAt;
+      refreshCustomerNoticeBadges();
+      if (document.querySelector('.customer-notice')) openCustomerNotifications();
+    });
+  return true;
+};
+const markAllNoticesBeforeCloud = markAllCustomerNoticesRead;
+markAllCustomerNoticesRead = function () {
+  markAllNoticesBeforeCloud();
+  const owner = currentCustomer()?.id;
+  const unread = cloudCustomerNotices.filter(item => item.customerId === owner && !item.readAt);
+  if (!unread.length) return;
+  const readAt = new Date().toISOString();
+  window.riseSupabase.from('notifications').update({read_at:readAt})
+    .eq('recipient_id',owner).in('id',unread.map(item => item.id)).select('id')
+    .then(({data,error}) => {
+      if (error) return toast('Não foi possível marcar as notificações: ' + error.message);
+      const updated = new Set((data || []).map(row => row.id));
+      for (const notice of unread) if (updated.has(notice.id)) notice.readAt = readAt;
+      refreshCustomerNoticeBadges();
+      if (document.querySelector('.customer-notice')) openCustomerNotifications();
+    });
+};
+const saveOrderBeforeStatusSync = saveOrder;
+const statusSyncInFlight = new Set();
+saveOrder = async function (id) {
+  const order = state.orders.find(item => String(item.id) === String(id));
+  if (!order?.remoteId) return saveOrderBeforeStatusSync(id);
+  if (!adminSession || !window.riseSupabase || statusSyncInFlight.has(order.remoteId)) return;
+  statusSyncInFlight.add(order.remoteId);
+  const before = structuredClone(order);
+  try {
+    await saveOrderBeforeStatusSync(id);
+    const changed = state.orders.find(item => item.remoteId === order.remoteId);
+    if (!changed || JSON.stringify(changed) === JSON.stringify(before)) return;
+    const deliveryStatus = ({'Em produção':'preparing',Enviado:'shipped','Em rota':'shipped',
+      'Concluído':'delivered',Cancelado:'cancelled'})[changed.status] || 'pending';
+    const {error} = await window.riseSupabase.from('orders').update({
+      status:changed.status,tracking_code:changed.tracking || '',delivery_status:deliveryStatus,
+      shipping_amount:changed.freight,total:changed.total
+    }).eq('id',changed.remoteId).select('id').single();
+    if (error) throw error;
+    toast('Andamento e rastreio sincronizados.');
+  } catch (error) {
+    state.orders = state.orders.map(item => item.remoteId === order.remoteId ? before : item);
+    persist();
+    render();
+    toast('O Supabase não confirmou a alteração: ' + error.message);
+  } finally {
+    statusSyncInFlight.delete(order.remoteId);
+  }
+};
 async function loadPublishedDelivery() {
   const {data,error} = await window.riseSupabase.from('site_settings')
     .select('value').eq('setting_key','checkout_delivery').maybeSingle();
