@@ -2951,7 +2951,7 @@ window.riseSupabaseBridge=(function(){
   const productIdsFor=async items=>{const legacy=[...new Set(items.map(item=>String(item.id||'')).filter(Boolean))];if(!legacy.length)return {};const {data,error}=await window.riseSupabase.from('products').select('id,legacy_id').in('legacy_id',legacy);if(error)throw error;return Object.fromEntries((data||[]).map(product=>[product.legacy_id,product.id]))};
   const uploadArtworkRecord=async(orderId,orderItemId,customerId,reference,position)=>{const record=await artworkRead(reference.key);if(!record?.data)return;const blob=await (await fetch(record.data)).blob();const safeName=String(record.name||`arte-${position+1}`).replace(/[^a-zA-Z0-9._-]+/g,'-');const path=`${customerId}/${orderId}/artworks/${Date.now()}-${position+1}-${safeName}`;const {error:uploadError}=await window.riseSupabase.storage.from('rise-order-files').upload(path,blob,{contentType:record.type||blob.type||'application/octet-stream',upsert:false});if(uploadError)throw uploadError;const {error}=await window.riseSupabase.from('order_artworks').insert({order_item_id:orderItemId,uploaded_by:customerId,bucket_path:path,file_name:record.name||safeName,mime_type:record.type||blob.type||'',artwork_role:'reference',position});if(error)throw error};
   const publishOrder=async localOrder=>{const {data:{user}}=await window.riseSupabase.auth.getUser();if(!user)throw Error('Entre na sua conta para salvar o pedido em todos os aparelhos.');const productIds=await productIdsFor(localOrder.items||[]);const {data:order,error}=await window.riseSupabase.from('orders').insert({customer_id:user.id,customer_name:localOrder.client||'',customer_company:localOrder.company||'',customer_email:localOrder.email||user.email||'',customer_phone:localOrder.phone||'',status:'Pedido recebido',payment_status:'pending',total:Number(localOrder.total||0),shipping_amount:Number(localOrder.freight||0),shipping_address:localOrder.shippingAddress||{},delivery_method:localOrder.deliveryMethod||'',customer_notes:localOrder.address||''}).select().single();if(error)throw error;const itemRows=(localOrder.items||[]).map(item=>({order_id:order.id,product_id:productIds[String(item.id)]||null,product_name:item.name||'',quantity:Number(item.configuration?.quantity||1),unit_price:Number(item.total||0),configuration:{...item.configuration,legacy_product_id:item.id,spec:item.spec,preview_image:item.previewImage,design:item.design,supplier:item.supplier},artwork_notes:''}));if(itemRows.length){const {data:remoteItems,error:itemError}=await window.riseSupabase.from('order_items').insert(itemRows).select();if(itemError)throw itemError;for(let i=0;i<remoteItems.length;i++){const refs=(localOrder.items[i]?.artworkReferences||[]);for(let p=0;p<refs.length;p++)await uploadArtworkRecord(order.id,remoteItems[i].id,user.id,refs[p],p)}}return order};
-  const loadRemoteOrders=async()=>{await loadCommercialData().catch(error=>console.warn("CRM indisponível.",error));await loadCloudCustomerNotices().catch(error=>console.warn('Notificações indisponíveis.',error));const {data,error}=await window.riseSupabase.from('orders').select('*,order_items(*,final_art_reviews(*),order_artworks(id,bucket_path,file_name,mime_type,position,artwork_role))').order('created_at',{ascending:false});if(error)throw error;if(!data?.length)return false;state.orders=data.map(order=>({id:String(order.order_number),remoteId:order.id,customerId:order.customer_id,finalArtByItem:readFinalArtReviews(order.order_items||[],order.customer_id),client:order.customer_name,company:order.customer_company,email:order.customer_email,phone:order.customer_phone,product:(order.order_items||[]).map(item=>item.product_name).join(', '),spec:(order.order_items||[]).map(item=>item.configuration?.spec||'').filter(Boolean).join(' / '),items:(order.order_items||[]).map(item=>({id:item.configuration?.legacy_product_id||0,name:item.product_name,key:item.id,total:Number(item.unit_price||0),configuration:item.configuration||{},spec:item.configuration?.spec||'',artworkReferences:(item.order_artworks||[]).filter(art=>art.artwork_role==='reference').sort((a,b)=>a.position-b.position).map(art=>({key:'cloud-art:'+art.id,path:art.bucket_path,name:art.file_name,type:art.mime_type}))})),total:Number(order.total||0),freight:Number(order.shipping_amount||0),status:order.status,deliveryMethod:order.delivery_method,date:new Date(order.created_at).toLocaleDateString('pt-BR'),createdAt:order.created_at,address:order.customer_notes,shippingAddress:order.shipping_address,trackingCode:order.tracking_code,tracking:order.tracking_code,notes:adminSession?order.internal_notes:'',paymentStatus:order.payment_status,reviewDecision:order.review_decision||'Aguardando análise',reviewReason:order.review_reason||'',reviewHistory:order.review_history||[],productionStartDate:order.production_start_date||'',productionDueDate:order.production_due_date||'',expectedDeliveryDate:order.expected_delivery_date||''}));try{persist()}catch{};return true};
+  const loadRemoteOrders=async()=>{await loadCommercialData().catch(error=>console.warn("CRM indisponível.",error));await loadCloudCustomerNotices().catch(error=>console.warn('Notificações indisponíveis.',error));const {data,error}=await window.riseSupabase.from('orders').select('*,rise_billing_drafts(payload),order_items(*,final_art_reviews(*),order_artworks(id,bucket_path,file_name,mime_type,position,artwork_role))').order('created_at',{ascending:false});if(error)throw error;const mapped=(data||[]).map(order=>({id:String(order.order_number),remoteId:order.id,customerId:order.customer_id,archivedAt:order.archived_at,deliveryConfirmation:order.delivery_confirmation,deliveryEvents:order.delivery_confirmation?[{...order.delivery_confirmation,id:order.id}]:[],payment:order.manual_payment,customerPaymentReceipt:order.customer_payment_receipt,billingDraft:order.rise_billing_drafts?.payload,finalArtByItem:readFinalArtReviews(order.order_items||[],order.customer_id),client:order.customer_name,company:order.customer_company,email:order.customer_email,phone:order.customer_phone,product:(order.order_items||[]).map(item=>item.product_name).join(', '),spec:(order.order_items||[]).map(item=>item.configuration?.spec||'').filter(Boolean).join(' / '),items:(order.order_items||[]).map(item=>({id:item.configuration?.legacy_product_id||0,name:item.product_name,key:item.id,total:Number(item.unit_price||0),configuration:item.configuration||{},spec:item.configuration?.spec||'',artworkReferences:(item.order_artworks||[]).filter(art=>art.artwork_role==='reference').sort((a,b)=>a.position-b.position).map(art=>({key:'cloud-art:'+art.id,path:art.bucket_path,name:art.file_name,type:art.mime_type}))})),total:Number(order.total||0),freight:Number(order.shipping_amount||0),status:order.status,deliveryMethod:order.delivery_method,date:new Date(order.created_at).toLocaleDateString('pt-BR'),createdAt:order.created_at,address:order.customer_notes,shippingAddress:order.shipping_address,trackingCode:order.tracking_code,tracking:order.tracking_code,notes:adminSession?order.internal_notes:'',paymentStatus:order.payment_status,reviewDecision:order.review_decision||'Aguardando análise',reviewReason:order.review_reason||'',reviewHistory:order.review_history||[],productionStartDate:order.production_start_date||'',productionDueDate:order.production_due_date||'',expectedDeliveryDate:order.expected_delivery_date||''}));state.orders=[...mapped.filter(order=>!order.archivedAt),...state.orders.filter(order=>!order.remoteId&&!mapped.some(remote=>remote.id===order.id))];state.deletedOrders=[...(state.deletedOrders||[]).filter(entry=>!entry.order.remoteId),...mapped.filter(order=>order.archivedAt).map(order=>({order,deletedAt:order.archivedAt}))];try{persist()}catch{};return true};
   const attachProfile=profile=>{const details=profile.details||{};if(profile.role==='admin'){adminSession=true;try{sessionStorage.setItem('rise-admin-session','supabase')}catch{};return profile}const account={...details,id:profile.id,email:profile.email,fullName:profile.full_name||details.fullName||'',legalName:profile.company_name||details.legalName||'',mobile:profile.phone||details.mobile||'',address:details.address||{}};const found=customerAccounts.findIndex(x=>x.id===account.id);if(found>=0)customerAccounts[found]={...customerAccounts[found],...account};else customerAccounts.push(account);signedCustomerId=account.id;try{sessionStorage.setItem('rise-customer-session',account.id)}catch{}return account};
   const signIn=async(form,adminOnly=false)=>{const email=String(form.email?.value||'').trim().toLowerCase(),password=String(form.password?.value||'');const button=form.querySelector('button[type="submit"]');if(button)button.disabled=true;try{const {data,error:authError}=await window.riseSupabase.auth.signInWithPassword({email,password});if(authError)throw authError;const profile=await profileQuery(data.user);if(adminOnly&&profile.role!=='admin'){await window.riseSupabase.auth.signOut();throw Error('Este e-mail não possui acesso administrativo.')}attachProfile(profile);await Promise.allSettled([loadRemoteCart(),loadRemoteOrders()]);form.password.value='';const isAdmin=profile.role==='admin';const destination=(adminOnly||isAdmin)?(navs.some(n=>n[0]===adminReturn)?adminReturn:'dashboard'):(authReturn==='checkout'?'shop':'account');go(destination);toast((adminOnly||isAdmin)?'Bem-vindo ao administrativo da RISE.':'Acesso realizado com sucesso.')}catch(error){err(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message||'Não foi possível entrar.')}finally{if(button)button.disabled=false}};
   const signUpAdmin=async()=>{const form=document.querySelector('.admin-login-card form');if(!form||!window.riseSupabase)return;const email=String(form.email.value||'').trim().toLowerCase(),password=String(form.password.value||'');if(email!==masterEmail)return err('Use o e-mail administrador da RISE.');if(password.length<8)return err('Crie uma senha com pelo menos 8 caracteres.');const {error}=await window.riseSupabase.auth.signUp({email,password,options:{data:{full_name:'RISE Comunicação Visual'}}});if(error)return err(error.message);err('Confira o e-mail da RISE para confirmar o primeiro acesso. Depois entre normalmente.');};
@@ -3552,6 +3552,8 @@ saveOrder = async function (id) {
       shipping_amount:changed.freight,total:changed.total,
       review_decision:changed.reviewDecision || null,review_reason:changed.reviewReason || null,
       review_history:changed.reviewHistory || [],
+      ...(changed.payment?.receipt?.path || changed.payment?.method === "quote" ? {manual_payment:changed.payment,
+        ...(changed.payment.confirmedAt ? {payment_status:"paid"} : {})} : {}),
       production_start_date:changed.productionStartDate || null,
       production_due_date:changed.productionDueDate || null,
       expected_delivery_date:changed.expectedDeliveryDate || null
@@ -3847,7 +3849,7 @@ async function loadCommercialData() {
   if (deals.error) throw deals.error;
   remoteKitQuotes = quotes.data.map(row => ({...row.payload,id:row.id,customerId:row.customer_id,
     createdAt:row.created_at,readAt:row.read_at,outcomeAt:row.filtered_at,status:row.filtered_at?'filtered':'new',
-    orderId:row.orders?.order_number,remote:true}));
+    orderId:row.orders?.order_number,importedBy:row.imported_by,legacyId:row.legacy_id,remote:true}));
   const old = state.deals.filter(deal => !remoteDealRevisions.has(Number(deal.id)) &&
     !deals.data.some(row => Number(row.id) === Number(deal.id)));
   remoteDealRevisions = new Map(deals.data.map(row => [Number(row.id),row.revision]));
@@ -3860,7 +3862,7 @@ async function loadCommercialData() {
 }
 const localKitQuotes = kitQuoteRecords;
 kitQuoteRecords = () => adminSession && window.riseSupabase
-  ? [...remoteKitQuotes,...localKitQuotes().filter(q=>!q.remote)] : localKitQuotes();
+  ? [...remoteKitQuotes,...localKitQuotes().filter(q=>!q.remote&&!remoteKitQuotes.some(remote=>remote.legacyId===q.id))] : localKitQuotes();
 const localKitRequest = kitRecordRequest;
 kitRecordRequest = async function(t,blob) {
   const customer = currentCustomer();
@@ -3909,7 +3911,7 @@ kitReadRequestMedia = async function(id) {
   if (!quote) return localKitMedia(id);
   if (!adminSession) return null;
   const bucket = window.riseSupabase.storage.from('rise-order-files');
-  const prefix = [quote.customerId,'quotes',quote.id,''].join('/');
+  const prefix = [quote.importedBy||quote.customerId,'quotes',quote.id,''].join('/');
   const download = async path => {
     if (typeof path !== 'string' || !path.startsWith(prefix) || path.slice(prefix.length).includes('/'))
       throw Error('Arquivo do orçamento inválido.');
@@ -3917,7 +3919,7 @@ kitReadRequestMedia = async function(id) {
     if (error) throw error;
     return data;
   };
-  const [image,...references] = await Promise.all([download(quote.imagePath),
+  const [image,...references] = await Promise.all([quote.imagePath?download(quote.imagePath):Promise.resolve(null),
     ...(quote.references || []).map(async ref=>({name:ref.name,data:await readDataFile(await download(ref.path))}))]);
   return {image,references};
 };
@@ -4003,6 +4005,251 @@ convertDeal = async function(id) {
   } catch (error) {
     toast('Não foi possível converter a negociação: '+error.message);
   } finally { remoteCrmSaving = false; }
+};
+const localNewManualOrder = newOrder;
+newOrder = async function() {
+  if (!window.riseSupabase) return localNewManualOrder();
+  if (!adminSession) return;
+  const {data,error} = await window.riseSupabase.from('profiles')
+    .select('id,full_name,email').eq('role','customer').order('full_name');
+  if (error) return toast('Não foi possível carregar os clientes: '+error.message);
+  if (!adminSession) return;
+  if (!data.length) return toast('Cadastre um cliente para vincular o pedido ao histórico.');
+  modal('Novo pedido', '<form id="newOrderForm" onsubmit="event.preventDefault();createOrder(this)">'+
+    '<label>Cliente cadastrado<select name="customer" required>'+data.map(c=>
+      '<option value="'+esc(c.id)+'">'+esc(c.full_name||c.email)+' · '+esc(c.email)+'</option>').join('')+
+    '</select></label><label>Produto<select name="product" required>'+products.map(p=>
+      '<option value="'+Number(p.id)+'">'+esc(p.name)+'</option>').join('')+
+    '</select></label><label>Valor negociado (R$)<input name="value" type="number" min="0.01" step="0.01" required></label>'+
+    '<label>Configuração e medidas<textarea name="spec" maxlength="4000" required></textarea></label>'+
+    '<button class="btn primary" type="submit">Criar pedido</button></form>');
+};
+const localCreateManualOrder = createOrder;
+createOrder = async function(form) {
+  if (!window.riseSupabase) return localCreateManualOrder(form);
+  const submit = form.querySelector('button[type="submit"]');
+  if (!adminSession || !submit || submit.disabled || !form.reportValidity()) return;
+  submit.disabled = true;
+  try {
+    const field = key => form.elements.namedItem(key).value;
+    form.dataset.manualRequest ||= crypto.randomUUID();
+    const {data,error} = await window.riseSupabase.rpc('create_rise_manual_order',{
+      request_id:form.dataset.manualRequest,buyer_id:field('customer'),
+      catalog_product_id:Number(field('product')),negotiated_total:Number(field('value')),specification:field('spec')});
+    if (error) throw error;
+    closeModal();
+    toast('Pedido #'+data+' registrado no Supabase.');
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    go('orders');
+  } catch (error) {
+    toast('Confira o pedido no painel: '+error.message);
+  } finally {
+    submit.disabled = false;
+  }
+};
+const pendingRemoteOperations = new Set();
+async function runRemoteOrderOperation(order, operation) {
+  if (pendingRemoteOperations.has(order.remoteId)) return false;
+  pendingRemoteOperations.add(order.remoteId);
+  try {
+    const {error} = await window.riseSupabase.rpc('rise_order_operation',{target_id:order.remoteId,operation});
+    if (error) throw error;
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    return true;
+  } catch (error) {
+    toast('Não foi possível sincronizar o pedido: '+error.message);
+    return false;
+  } finally { pendingRemoteOperations.delete(order.remoteId); }
+}
+const localConfirmCustomerDelivery = confirmCustomerDelivery;
+confirmCustomerDelivery = async function(id) {
+  const order = cloudFinalArtOrder(id);
+  if (!order) return localConfirmCustomerDelivery(id);
+  if (currentCustomer()?.id !== order.customerId) return;
+  if (await runRemoteOrderOperation(order,'confirm_delivery')) {
+    closeModal(); accountTab='orders'; go('account'); toast('Entrega confirmada.');
+  }
+};
+const localConfirmAdminDelivery = confirmAdminDelivery;
+confirmAdminDelivery = async function(id) {
+  const order = cloudFinalArtOrder(id);
+  if (!order) return localConfirmAdminDelivery(id);
+  if (adminSession && await runRemoteOrderOperation(order,'confirm_delivery')) {
+    render(); orderDetail(id); toast('Entrega confirmada no histórico do pedido.');
+  }
+};
+const localDeletePendingOrder = deletePendingOrder;
+deletePendingOrder = async function(id) {
+  const order = cloudFinalArtOrder(id);
+  if (!order) return localDeletePendingOrder(id);
+  if (adminSession && await runRemoteOrderOperation(order,'archive')) {
+    closeModal(); go('orders'); toast('Pedido arquivado. Você pode restaurá-lo no painel.');
+  }
+};
+const localRestoreDeletedOrder = restoreDeletedOrder;
+restoreDeletedOrder = async function(id) {
+  const order = state.deletedOrders.find(entry=>String(entry.order.id)===String(id))?.order;
+  if (!order?.remoteId) return localRestoreDeletedOrder(id);
+  if (adminSession && await runRemoteOrderOperation(order,'restore')) {
+    render(); openDeletedOrders(); toast('Pedido restaurado.');
+  }
+};
+async function savePrivateReceipt(input, order) {
+  const file = input.files?.[0];
+  if (!file) return null;
+  const extension = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','application/pdf':'pdf'}[file.type];
+  if (!extension || !file.size || file.size>10485760) throw Error('Use JPG, PNG, WebP ou PDF de até 10 MB.');
+  const {data,error} = await window.riseSupabase.auth.getUser();
+  if (error || !data?.user) throw error || Error('Sessão indisponível.');
+  const path = [data.user.id,'receipts',order.remoteId,crypto.randomUUID()+'.'+extension].join('/');
+  const stored = await window.riseSupabase.storage.from('rise-order-files').upload(path,file,{contentType:file.type});
+  if (stored.error) throw stored.error;
+  return {key:'receipt:'+path,path,name:file.name,type:file.type};
+}
+const localCustomerReceipt = uploadCustomerPaymentReceipt;
+uploadCustomerPaymentReceipt = async function(input) {
+  const order = cloudFinalArtOrder(input.dataset.order);
+  if (!order) return localCustomerReceipt(input);
+  if (currentCustomer()?.id!==order.customerId || order.payment?.confirmedAt || input.disabled) return;
+  input.disabled=true;
+  try {
+    const file = await savePrivateReceipt(input,order);
+    if (!file) return;
+    const {error} = await window.riseSupabase.rpc('submit_rise_payment_receipt',{
+      target_id:order.remoteId,file_path:file.path,file_name:file.name});
+    if (error) throw error;
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    render();
+    toast('Comprovante enviado para conferência.');
+  } catch (error) { toast('Não foi possível enviar o comprovante: '+error.message); }
+  finally { input.disabled=false; input.value=''; }
+};
+const localAdminReceipt = uploadOrderReceipt;
+uploadOrderReceipt = async function(input) {
+  const order = cloudFinalArtOrder(input.dataset.order);
+  if (!order) return localAdminReceipt(input);
+  if (!adminSession || input.disabled) return;
+  input.disabled=true;
+  try {
+    const file = await savePrivateReceipt(input,order);
+    if (!file) return;
+    paymentDraft(order).receipt=file;
+    if ($('#orderReceiptName')) $('#orderReceiptName').textContent=file.name+' · Salve o pedido para confirmar.';
+  } catch (error) { toast('Não foi possível enviar o comprovante: '+error.message); }
+  finally { input.disabled=false; input.value=''; }
+};
+const artworkReadBeforeReceipts=artworkRead;
+artworkRead=async function(key) {
+  if (!String(key).startsWith('receipt:')) return artworkReadBeforeReceipts(key);
+  const record=state.orders.filter(o=>adminSession||o.customerId===currentCustomer()?.id)
+    .flatMap(o=>[o.customerPaymentReceipt,adminSession?paymentDraft(o).receipt:null])
+    .find(receipt=>receipt?.key===key);
+  if (!record?.path) return null;
+  const {data,error}=await window.riseSupabase.storage.from('rise-order-files').download(record.path);
+  if (error) throw error;
+  return {...record,data:await readDataFile(new Blob([data],{type:record.type}))};
+};
+const localConfirmCustomerReceiptPayment=confirmCustomerReceiptPayment;
+confirmCustomerReceiptPayment=async function(id,key) {
+  const order=cloudFinalArtOrder(id);
+  if (!order) return localConfirmCustomerReceiptPayment(id,key);
+  if (!adminSession || order.customerPaymentReceipt?.key!==key || !$('#receiptReviewConfirmed')?.checked ||
+      pendingRemoteOperations.has(order.remoteId)) return toast('Confira o comprovante e marque a confirmação.');
+  const method=$('#receiptReviewMethod')?.value, installments=method==='credit'?Number($('#receiptReviewInstallments')?.value):1;
+  if (!['pix','credit'].includes(method) || !Number.isInteger(installments) || installments<1 || installments>24)
+    return toast('Confira forma de pagamento e parcelas.');
+  pendingRemoteOperations.add(order.remoteId);
+  try {
+    const at=new Date().toISOString();
+    const {error}=await window.riseSupabase.from('orders').update({
+      manual_payment:{method,installments,receipt:order.customerPaymentReceipt,confirmedAt:at},payment_status:'paid',
+      customer_payment_receipt:{...order.customerPaymentReceipt,reviewStatus:'confirmed',reviewedAt:at},
+      review_decision:'Aceito',review_history:[...(order.reviewHistory||[]),{decision:'Aceito',at,reason:'Pagamento conferido'}],
+      status:order.status==='Pagamento pendente'?'Arte pendente':order.status
+    }).eq('id',order.remoteId).is('archived_at',null).eq('customer_payment_receipt->>key',key)
+      .neq('payment_status','paid').select('id').single();
+    if (error) throw error;
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    closeModal(); render(); toast('Pagamento manual conferido.');
+  } catch (error) { toast('Não foi possível confirmar o pagamento: '+error.message); }
+  finally { pendingRemoteOperations.delete(order.remoteId); }
+};
+const localBillingSave=saveBillingDraft;
+saveBillingDraft=async function() {
+  const order=cloudFinalArtOrder(billingOrderId);
+  if (!order) return localBillingSave();
+  if (!adminSession || !billingDraft || !validBillingDraft(billingDraft)) return toast('Confira o demonstrativo.');
+  if (pendingRemoteOperations.has(order.remoteId)) return;
+  pendingRemoteOperations.add(order.remoteId);
+  try {
+    const {error}=await window.riseSupabase.from('rise_billing_drafts').upsert({
+      order_id:order.remoteId,payload:billingDraft,updated_at:new Date().toISOString()});
+    if (error) throw error;
+    order.billingDraft=structuredClone(billingDraft);
+    closeModal(); render(); toast('Demonstrativo salvo no Supabase.');
+  } catch (error) { toast('Não foi possível salvar o demonstrativo: '+error.message); }
+  finally { pendingRemoteOperations.delete(order.remoteId); }
+};
+let legacyCommercialImportRunning=false;
+const localOpenKitInbox=openKitRequests;
+openKitRequests=function() {
+  const result=localOpenKitInbox();
+  if (adminSession && window.riseSupabase && (localKitQuotes().length ||
+      state.deals.some(deal=>deal.createdAt&&!remoteDealRevisions.has(Number(deal.id))))) {
+    document.querySelector('#overlay .modal .body')?.insertAdjacentHTML('beforeend',
+      '<button type="button" class="btn" onclick="importRiseLegacyCommercial()">Importar registros deste navegador</button>');
+  }
+  return result;
+};
+window.importRiseLegacyCommercial=async function() {
+  if (!adminSession || legacyCommercialImportRunning) return;
+  legacyCommercialImportRunning=true;
+  let imported=0, skipped=0;
+  try {
+    const client=window.riseSupabase;
+    const {data,error}=await client.auth.getUser();
+    if (error || !data?.user) throw error || Error('Sessão indisponível.');
+    const existing=new Set(remoteKitQuotes.map(quote=>quote.legacyId));
+    const bucket=client.storage.from('rise-order-files');
+    for (const quote of localKitQuotes().filter(item=>!item.remote&&!existing.has(item.id))) {
+      try {
+        if (!customerAccounts.some(customer=>String(customer.email).toLowerCase()===String(quote.contact?.email).toLowerCase()))
+          throw Error('Cliente do orçamento indisponível.');
+        const id='kit-'+crypto.randomUUID();
+        const prefix=[data.user.id,'quotes',id,''].join('/');
+        const media=await localKitMedia(quote.id);
+        const fields={...quote,references:[],imagePath:null};
+        async function put(file,name) {
+          const path=prefix+name;
+          const {error}=await bucket.upload(path,file,{contentType:file.type});
+          if (error) throw error;
+          return path;
+        }
+        if (media?.image) fields.imagePath=await put(media.image,'quote.png');
+        for (const [index,ref] of (media?.references||[]).entries()) {
+          const file=await (await fetch(ref.data)).blob();
+          fields.references.push({path:await put(file,'reference-'+index),name:ref.name,type:file.type});
+        }
+        const {error}=await client.rpc('import_rise_kit_quote',{quote_id:id,source_id:quote.id,fields});
+        if (error) throw error;
+        imported++;
+      } catch (error) { skipped++; console.warn('Orçamento antigo requer conferência.',error.message); }
+    }
+    for (const deal of state.deals.filter(item=>item.createdAt&&!remoteDealRevisions.has(Number(item.id)))) {
+      const payload=structuredClone(deal);
+      if (payload.orderId&&!state.orders.some(order=>order.remoteId&&String(order.id)===String(payload.orderId))) {
+        skipped++;
+        continue;
+      }
+      const {error}=await client.from('rise_crm_deals').upsert({id:deal.id,payload},
+        {onConflict:'id',ignoreDuplicates:true});
+      if (error) skipped++; else imported++;
+    }
+    await loadCommercialData();
+    render(); openKitRequests();
+    toast(imported+' registro(s) sincronizado(s). '+skipped+' para conferir neste navegador.');
+  } catch (error) { toast('Não foi possível importar os registros: '+error.message); }
+  finally { legacyCommercialImportRunning=false; }
 };
 const sharedPricesRequest = loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
 const sharedCatalogOrderRequest = loadPublishedCatalogOrder().catch(error => console.warn("Ordem compartilhada indisponível.",error));
