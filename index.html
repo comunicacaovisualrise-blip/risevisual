@@ -2827,6 +2827,35 @@ const shortcutMobileLayout = matchMedia('(max-width:760px)');
 let shortcutIntroDone = false;
 let observedShortcuts;
 let shortcutIntroTimer;
+function slideShortcutIntro(row, left) {
+  if (matchMedia('(prefers-reduced-motion:reduce)').matches) {
+    row.scrollTo({left,behavior:'instant'});
+    return;
+  }
+  const from = row.scrollLeft;
+  const target = Math.min(left,row.scrollWidth - row.clientWidth);
+  const previousSnap = row.style.scrollSnapType;
+  const start = performance.now();
+  let frame;
+  row.style.scrollSnapType = 'none';
+  function stop() {
+    cancelAnimationFrame(frame);
+    row.style.scrollSnapType = previousSnap;
+    row.removeEventListener('pointerdown',stop);
+    row.removeEventListener('keydown',stop);
+  }
+  function advance(now) {
+    if (!row.isConnected) return stop();
+    const progress = Math.min(1,(now - start) / 1700);
+    const eased = progress * progress * (3 - 2 * progress);
+    row.scrollLeft = from + (target - from) * eased;
+    if (progress < 1) frame = requestAnimationFrame(advance);
+    else stop();
+  }
+  row.addEventListener('pointerdown',stop,{once:true,passive:true});
+  row.addEventListener('keydown',stop,{once:true});
+  frame = requestAnimationFrame(advance);
+}
 const shortcutIntroObserver = new IntersectionObserver(entries => {
   const entry = entries.find(item => item.target === observedShortcuts);
   clearTimeout(shortcutIntroTimer);
@@ -2838,10 +2867,7 @@ const shortcutIntroObserver = new IntersectionObserver(entries => {
     const fourth = row.children[3];
     if (!fourth || !row.firstElementChild) return;
     shortcutIntroDone = true;
-    row.scrollTo({
-      left:fourth.offsetLeft - row.firstElementChild.offsetLeft,
-      behavior:matchMedia('(prefers-reduced-motion:reduce)').matches ? 'instant' : 'smooth'
-    });
+    slideShortcutIntro(row,fourth.offsetLeft - row.firstElementChild.offsetLeft);
   }, 1000);
 }, {threshold:0.6});
 function observeMobileShortcuts() {
