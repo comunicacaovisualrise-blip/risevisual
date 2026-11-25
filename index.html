@@ -504,6 +504,62 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 @media(max-width:550px){.shop-header.retail-header>.mobile-product-trigger{top:-23px;height:24px;width:28px;min-width:28px!important}.retail-utility>span:first-child{padding-left:36px}.shop-header.retail-header .header-brand-group{justify-content:flex-start;justify-self:start}}
 
 /* Blend catalogue-category photos into their own pastel tile instead of a white rectangle. */
+.rise-about-portal {
+  inset:0;
+  width:min(92vw,720px);
+  height:min(68vh,520px);
+  max-width:none;
+  max-height:none;
+  margin:auto;
+  padding:24px;
+  border:1px solid #76a7ff;
+  border-radius:20px;
+  color:white;
+  background:radial-gradient(ellipse at center,#163b83,#050d38 64%);
+  overflow:hidden;
+  isolation:isolate;
+}
+.rise-about-portal[open] {display:grid;place-items:center;text-align:center}
+.rise-about-portal::before,.rise-about-portal::after {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  width:min(75vw,660px);
+  aspect-ratio:1;
+  border-radius:50%;
+  border:2px solid #76a7ff;
+  box-shadow:0 0 44px #2664ff,inset 0 0 44px #2664ff;
+  animation:risePortalOpen 2.8s cubic-bezier(.2,.7,.2,1) both;
+}
+.rise-about-portal::after {
+  width:min(67vw,590px);
+  border-color:#ff9b46;
+  box-shadow:0 0 32px #ff6900,inset 0 0 24px #ff6900;
+  animation-delay:.12s;
+}
+.rise-about-portal h2 {
+  max-width:18ch;
+  margin:0;
+  font-size:clamp(26px,6vw,60px);
+  line-height:1.15;
+  text-shadow:0 2px 18px #050d38;
+}
+.rise-about-portal::backdrop {background:#050d38d9}
+.rise-about-portal-logo {
+  position:absolute;
+  z-index:-1;
+  width:min(45vw,220px);
+  opacity:.24;
+  animation:risePortalOpen 3s ease-out both;
+}
+@keyframes risePortalOpen {
+  0% {transform:scale(.24);opacity:.2}
+  48% {transform:scale(.86);opacity:.9}
+  100% {transform:scale(1.45);opacity:.38}
+}
+@media(prefers-reduced-motion:reduce) {
+  .rise-about-portal::before,.rise-about-portal::after,.rise-about-portal-logo {animation:none;opacity:.24}
+}
 .rise-site-footer .rise-footer-shortcuts {
   justify-content:center;
   flex-wrap:wrap;
@@ -3075,6 +3131,34 @@ kitSelected = function () {
   });
 };
 const saveProductBeforeMediaSync = saveProduct;
+const goBeforeAboutPortal = go;
+let activeAboutPortal;
+go = function (view, ...args) {
+  if (view !== 'about' || state.view === 'about' ||
+      typeof HTMLDialogElement === 'undefined') {
+    return goBeforeAboutPortal(view,...args);
+  }
+  if (activeAboutPortal) return;
+  const portal = document.createElement('dialog');
+  portal.className = 'rise-about-portal';
+  portal.setAttribute('aria-labelledby','riseAboutPortalTitle');
+  portal.innerHTML = '<img class="rise-about-portal-logo" src="' + esc(riseBrandMediaSrc('siteLogo')) + '" alt="" aria-hidden="true"><h2 id="riseAboutPortalTitle" tabindex="-1" autofocus>Sua marca merece ser impossível de ignorar.</h2>';
+  document.body.append(portal);
+  activeAboutPortal = portal;
+  let timer;
+  function enter() {
+    if (activeAboutPortal !== portal) return;
+    activeAboutPortal = null;
+    clearTimeout(timer);
+    portal.close();
+    portal.remove();
+    return goBeforeAboutPortal(view,...args);
+  }
+  portal.addEventListener('cancel',event => {event.preventDefault();enter()});
+  try {portal.showModal()}
+  catch {return enter()}
+  timer = setTimeout(enter,3000);
+};
 let measuredMobileHeader;
 const mobileHeaderResize = new ResizeObserver(centerMobileAbout);
 function centerMobileAbout() {
