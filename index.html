@@ -2001,7 +2001,20 @@ const adminItemsBeforeDeliveryActor=adminNotificationItems;
 adminNotificationItems=function(){const items=adminItemsBeforeDeliveryActor();return items.map(item=>{if(item.kind!=='delivery')return item;const order=state.orders.find(o=>String(o.id)===String(item.orderId)),event=(order?.deliveryEvents||[]).find(e=>'delivery:'+order.id+':'+e.id===item.key);return event?.actorRole==='admin'?{...item,message:'Entrega confirmada pelo administrador '+(event.actorName||'RISE')+'.'}:item})};
 
 /* Product availability: retained in administration, hidden throughout the storefront. */
-function productIsActive(p){return !!p&&p.active!==false}
+let publishedProductVisibility = {};
+function productIsActive(p){return !!p&&(publishedProductVisibility[p.id] ?? p.active)!==false}
+async function loadPublishedProductVisibility() {
+  const {data,error} = await window.riseSupabase.from('site_settings')
+    .select('setting_key,value').like('setting_key','product_visibility_%');
+  if (error) throw error;
+  publishedProductVisibility = Object.fromEntries((data || [])
+    .filter(item => typeof item.value?.active === 'boolean')
+    .map(item => [item.setting_key.slice('product_visibility_'.length),item.value.active]));
+}
+const categoryTilesBeforePublishedVisibility = retailCategoryTiles;
+retailCategoryTiles = function (...args) {
+  return withActiveCatalog(categoryTilesBeforePublishedVisibility,args);
+};
 function withActiveCatalog(fn,args){const all=products;products=all.filter(productIsActive);try{return fn(...args)}finally{products=all}}
 const homeBeforeProductVisibility=campaignHome;
 campaignHome=function(...args){return withActiveCatalog(homeBeforeProductVisibility,args)};
@@ -2028,16 +2041,18 @@ async function toggleProductActive(id){
  if(!adminSession)return toast('Entre como administrador para alterar o produto.');
  if(productVisibilityBusy||imageBusy)return;
  const p=products.find(p=>p.id===Number(id));if(!p)return;
- const before=products,raw=localStorage.getItem('rise-demo'),snapshot=auditSnapshot();
+ const active = !productIsActive(p);
  productVisibilityBusy=true;
  try{
-  if(raw){const latest=JSON.parse(raw);const saved=latest.products?.find(x=>x.id===p.id);if(saved&&productIsActive(saved)!==productIsActive(p))throw Error('O produto mudou em outra aba. Recarregue antes de continuar.')}
-  products=products.map(x=>x.id===p.id?{...x,active:!productIsActive(x)}:x);
-  auditWriteState(snapshot);
-  /* Metadata is authoritative; the media store must not restore an older status. */
-  storeProductCatalog(products).catch(()=>{});
-  render();toast(productIsActive(products.find(x=>x.id===p.id))?'Produto reativado e disponível na loja.':'Produto desativado. Visível somente em Produtos do administrador.');
- }catch(error){products=before;toast('Não foi possível alterar o produto. '+error.message)}
+  if(!window.riseSupabase)throw Error('Abra o site publicado para alterar a vitrine.');
+  const {error} = await window.riseSupabase.from('site_settings')
+    .upsert({setting_key:'product_visibility_'+p.id,value:{active}},{onConflict:'setting_key'});
+  if(error)throw error;
+  publishedProductVisibility[p.id]=active;
+  products=products.map(x=>x.id===p.id?{...x,active}:x);
+  persist();
+  render();toast(active?'Produto reativado na loja.':'Produto desativado na loja.');
+ }catch(error){toast('Não foi possível alterar o produto. '+error.message)}
  finally{productVisibilityBusy=false}
 }
 const adminBeforeProductVisibility=adminProducts;
@@ -2961,6 +2976,8 @@ const showcaseRequest = (async () => {
   if (state.view === 'shop' && !document.getElementById('overlay')?.innerHTML) render();
 })();
 const sharedPricesRequest = loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
+const productVisibilityRequest = loadPublishedProductVisibility().catch(error =>
+  console.warn('Status dos produtos indisponível.', error));
 try {
   await window.riseSupabaseBridge.loadSharedCatalog();
 } catch (error) {
@@ -2969,7 +2986,7 @@ try {
 await window.riseSupabaseBridge.loadSharedProductMedia();
 publicCoversReady = true;
 if (state.view === 'shop' && !document.getElementById('overlay')?.innerHTML) render();
-await Promise.all([sharedPricesRequest, sharedContentRequest, showcaseRequest]);
+await Promise.all([sharedPricesRequest, sharedContentRequest, showcaseRequest, productVisibilityRequest]);
 const sessionResult=await window.riseSupabase.auth.getSession();
 if(riseRecoveryLink&&sessionResult.data.session){window.riseSupabaseBridge.openPasswordRecovery()}else if(sessionResult.data.session){try{const profile=await window.riseSupabaseBridge.profileQuery(sessionResult.data.session.user);window.riseSupabaseBridge.attachProfile(profile);await Promise.allSettled([window.riseSupabaseBridge.loadRemoteCart(),window.riseSupabaseBridge.loadRemoteOrders()]);if(profile.role==='admin')window.riseSupabaseBridge.syncCatalog().then(()=>window.riseSupabaseBridge.syncLocalProductMedia()).then(count=>{if(count)console.info(`Galeria RISE sincronizada: ${count} produto(s).`)}).catch(error=>console.warn('Não foi possível sincronizar o catálogo local.',error));render()}catch(error){console.warn('Não foi possível restaurar a sessão RISE.',error)}}else render();
 </script></body></html>
