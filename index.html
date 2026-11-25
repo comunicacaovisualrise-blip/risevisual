@@ -1470,7 +1470,7 @@ function crmReminders(){return state.deals.filter(d=>crmDue(d)).sort((a,b)=>Date
 function crmHistoryMarkup(deals){const events=deals.flatMap(d=>[{type:'Oportunidade',text:d.name+' · '+crmStages[d.stage]+' · '+money(d.value)+(d.notes?' · Produtos/observações: '+d.notes:''),at:d.createdAt||'',author:'Registro comercial',deal:d.name},...(d.history||[]).map(e=>({...e,deal:d.name}))]);events.sort((a,b)=>(Date.parse(b.at)||0)-(Date.parse(a.at)||0));return '<div class="crm-timeline">'+(events.map(e=>'<article><div class="row between"><strong>'+esc(e.type)+'</strong><small>'+esc(e.at?crmDate(e.at):'Registro anterior, sem data')+'</small></div><p>'+esc(e.text).replace(/\n/g,'<br>')+'</p><small>'+esc(e.deal)+' · '+esc(e.author||'Administrador')+'</small></article>').join('')||'<p class="hint">Nenhum registro comercial para este cliente.</p>')+'</div>'}
 function crmCustomerHistory(id){if(!adminSession)return;const d=state.deals.find(x=>String(x.id)===String(id));if(!d)return;const related=state.deals.filter(x=>crmKey(x)===crmKey(d));modal('Histórico de '+esc(d.person),'<p class="hint">'+esc(d.company||'Cliente')+' · '+related.length+' oportunidade(s)</p>'+crmHistoryMarkup(related),'',true)}
 function crmReminderMarkup(){const due=crmReminders();return '<section class="panel crm-followups"><div class="panel-head"><div><h3>Retornos e cobranças</h3><p>'+due.length+' lembrete(s) vencido(s) ou para agora</p></div></div>'+ (due.length?due.map(d=>'<div class="crm-followup"><div><strong>'+esc(d.person)+' · '+esc(d.name)+'</strong><p>'+esc(d.reminderText||'Retomar contato sobre a proposta em aberto.')+'</p><small>Agendado: '+esc(crmDate(d.nextContact))+'</small></div><button class="btn" onclick="dealDetail('+d.id+')">Registrar retorno</button></div>').join(''):'<p class="hint" style="padding:0 20px 16px">Nenhum retorno vencido. Agende o próximo contato dentro da oportunidade.</p>')+'</section>'}
-crm=function(){const open=state.deals.filter(crmIsOpen);return intro('CRM de clientes','Acompanhe propostas, acordos e cada retorno até a decisão do cliente.', '<button class="btn" onclick="clientList()">Clientes e histórico</button><button class="btn primary" onclick="newDeal()">+ Nova oportunidade</button>')+'<div class="crm-summary"><span class="pill blue">'+open.length+' em aberto · '+money(open.reduce((s,d)=>s+Number(d.value||0),0))+'</span><span class="pill">'+state.deals.filter(d=>Number(d.stage)===3).length+' vendas concluídas</span><span class="pill gray">'+state.deals.filter(d=>Number(d.stage)===4).length+' não fechadas</span></div>'+crmReminderMarkup()+'<div class="crm-board">'+crmStages.map((stage,i)=>'<section class="column"'+(i?' data-quote-stage="'+['','sent','negotiating','won','lost'][i]+'"':'')+'><div class="column-title"><strong>'+stage+'</strong><span>'+(state.deals.filter(d=>Number(d.stage)===i).length+(window.quoteCardsForCrmColumn?.(i).length||0))+'</span></div>'+(window.quoteCardsForCrmColumn?.(i).map(window.crmQuoteCardMarkup).join('')||'')+state.deals.filter(d=>Number(d.stage)===i).map(d=>'<article class="deal"><span class="pill gray">'+esc(d.company||'Pessoa física')+'</span><h4>'+esc(d.name)+'</h4><small>'+esc(d.person)+'</small><p class="crm-card-notes">'+esc(d.notes||'Produtos ainda não discriminados.')+'</p><div class="price">'+money(d.value)+'</div>'+(d.nextContact&&crmIsOpen(d)?'<p class="crm-due '+(crmDue(d)?'overdue':'')+'">'+(crmDue(d)?'Retorno pendente: ':'Próximo contato: ')+esc(crmDate(d.nextContact))+'</p>':'')+'<button class="link" onclick="dealDetail('+d.id+')">Abrir negociação →</button></article>').join('')+'<button class="link" onclick="newDeal('+i+')">+ Nova oportunidade</button></section>').join('')+'</div>'};
+crm=function(){const open=state.deals.filter(crmIsOpen);return intro('CRM de clientes','Acompanhe propostas, acordos e cada retorno até a decisão do cliente.', '<button class="btn" onclick="clientList()">Clientes e histórico</button><button class="btn primary" onclick="newDeal()">+ Nova oportunidade</button><button type="button" class="btn" onclick="refreshCrmQuotes(true)">Atualizar orçamentos</button>')+'<div class="crm-summary"><span class="pill blue">'+open.length+' em aberto · '+money(open.reduce((s,d)=>s+Number(d.value||0),0))+'</span><span class="pill">'+state.deals.filter(d=>Number(d.stage)===3).length+' vendas concluídas</span><span class="pill gray">'+state.deals.filter(d=>Number(d.stage)===4).length+' não fechadas</span></div>'+crmReminderMarkup()+'<div class="crm-board">'+crmStages.map((stage,i)=>'<section class="column"'+(i?' data-quote-stage="'+['','sent','negotiating','won','lost'][i]+'"':'')+'><div class="column-title"><strong>'+stage+'</strong><span>'+(state.deals.filter(d=>Number(d.stage)===i).length+(window.quoteCardsForCrmColumn?.(i).length||0))+'</span></div>'+(window.quoteCardsForCrmColumn?.(i).map(window.crmQuoteCardMarkup).join('')||'')+state.deals.filter(d=>Number(d.stage)===i).map(d=>'<article class="deal"><span class="pill gray">'+esc(d.company||'Pessoa física')+'</span><h4>'+esc(d.name)+'</h4><small>'+esc(d.person)+'</small><p class="crm-card-notes">'+esc(d.notes||'Produtos ainda não discriminados.')+'</p><div class="price">'+money(d.value)+'</div>'+(d.nextContact&&crmIsOpen(d)?'<p class="crm-due '+(crmDue(d)?'overdue':'')+'">'+(crmDue(d)?'Retorno pendente: ':'Próximo contato: ')+esc(crmDate(d.nextContact))+'</p>':'')+'<button class="link" onclick="dealDetail('+d.id+')">Abrir negociação →</button></article>').join('')+'<button class="link" onclick="newDeal('+i+')">+ Nova oportunidade</button></section>').join('')+'</div>'};
 function crmStageOptions(stage){return crmStages.map((s,i)=>'<option value="'+i+'" '+(Number(stage)===i?'selected':'')+'>'+s+'</option>').join('')}
 function crmCustomerOptions(){return customerAccounts.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.fullName||c.legalName||c.email)+' · '+esc(c.email)+'</option>').join('')}
 function crmFillCustomer(select){const c=customerAccounts.find(c=>String(c.id)===String(select.value));if(!c)return;const f=select.form;f.elements.namedItem('person').value=c.fullName||c.legalName||'';f.elements.namedItem('company').value=c.legalName||c.company||'';f.elements.namedItem('phone').value=c.mobile||c.phone||'';f.elements.namedItem('email').value=c.email||''}
@@ -3869,19 +3869,31 @@ confirmAdminWhatsAppArt = async function(button) {
 };
 let remoteKitQuotes = [];
 let remoteDealRevisions = new Map();
-async function loadCommercialData() {
-  if (!adminSession) return;
-  const client = window.riseSupabase;
-  const [quotes,deals,clients] = await Promise.all([
-    client.from('rise_kit_quotes').select('*,orders(order_number)').order('created_at',{ascending:false}),
-    client.from('rise_crm_deals').select('id,payload,revision').order('id',{ascending:true}),
-    client.from('profiles').select('id,email,full_name,company_name,phone').eq('role','customer')
-  ]);
-  if (quotes.error) throw quotes.error;
-  if (deals.error) throw deals.error;
+let crmQuoteLoadInFlight;
+function loadRemoteCrmQuotes(){
+  if(!adminSession||!window.riseSupabase)return Promise.resolve();
+  if(crmQuoteLoadInFlight)return crmQuoteLoadInFlight;
+  crmQuoteLoadInFlight=(async()=>{
+    const {data,error}=await window.riseSupabase.from('rise_kit_quotes').select('*,orders(order_number)').order('created_at',{ascending:false});
+    if(error)throw error;
+    if(!adminSession)return;
+    const quotes={data:data||[]};
   remoteKitQuotes = quotes.data.map(row => ({...row.payload,id:row.id,customerId:row.customer_id,
     number:row.quote_number,commercialStage:row.filtered_at?'lost':row.commercial_stage,createdAt:row.created_at,readAt:row.read_at,outcomeAt:row.filtered_at,status:row.filtered_at?'filtered':'new',
     orderId:row.orders?.order_number,importedBy:row.imported_by,legacyId:row.legacy_id,remote:true}));
+  })().finally(()=>{crmQuoteLoadInFlight=null});
+  return crmQuoteLoadInFlight;
+}
+async function loadCommercialData() {
+  if (!adminSession) return;
+  const client = window.riseSupabase;
+  const [,deals,clients] = await Promise.all([
+    loadRemoteCrmQuotes(),
+    client.from('rise_crm_deals').select('id,payload,revision').order('id',{ascending:true}),
+    client.from('profiles').select('id,email,full_name,company_name,phone').eq('role','customer')
+  ]);
+  if (deals.error) throw deals.error;
+
   const old = state.deals.filter(deal => !remoteDealRevisions.has(Number(deal.id)) &&
     !deals.data.some(row => Number(row.id) === Number(deal.id)));
   remoteDealRevisions = new Map(deals.data.map(row => [Number(row.id),row.revision]));
@@ -4525,12 +4537,28 @@ window.orderPaymentPreviewButton=function(order){
       ?'<button type="button" class="btn primary" data-order="'+esc(order.id)+
        '" onclick="openCustomerOrderPaymentPreview(this.dataset.order)">Efetuar pagamento</button>':'';
 };
+window.refreshCrmQuotes=async function(showFeedback=false){
+  if(!adminSession||state.view!=='crm'||quoteDrag||(!showFeedback&&document.querySelector('#overlay .modal')))return;
+  const before=JSON.stringify(remoteKitQuotes);
+  try{
+    await loadRemoteCrmQuotes();
+    if(!adminSession||state.view!=='crm'||quoteDrag||document.querySelector('#overlay .modal'))return;
+    if(showFeedback||before!==JSON.stringify(remoteKitQuotes))render();
+    if(showFeedback)toast('Orçamentos atualizados.');
+  }catch(error){
+    if(showFeedback)toast('Não foi possível atualizar os orçamentos: '+error.message);
+    else console.warn('Não foi possível atualizar os orçamentos.',error);
+  }
+};
+window.addEventListener('focus',()=>window.refreshCrmQuotes());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)window.refreshCrmQuotes()});
+setInterval(()=>{if(!document.hidden)window.refreshCrmQuotes()},15000);
 const quoteGo=go;
 go=function(view,...args){
   const result=quoteGo(view,...args);
-  if(view==='crm'&&adminSession&&window.riseSupabase)loadCommercialData().then(()=>{
+  if(view==='crm'&&adminSession&&window.riseSupabase){window.refreshCrmQuotes();loadCommercialData().then(()=>{
     if(state.view==='crm')render();
-  }).catch(error=>console.warn('Não foi possível atualizar o CRM.',error));
+  }).catch(error=>console.warn('Não foi possível atualizar o CRM.',error));}
   return result;
 };
 const sharedPricesRequest = loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
