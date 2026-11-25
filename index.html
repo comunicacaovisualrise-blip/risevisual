@@ -4352,7 +4352,7 @@ window.customerQuoteListMarkup=function(){
     '<article class="customer-order"><div class="row between"><h3>Orçamento #'+esc(quote.number)+'</h3><span class="pill">'+
     quoteStageLabels[quote.stage]+'</span></div><p class="hint">'+esc(noticeDate(quote.createdAt))+'</p>'+
     '<p>'+esc(quote.items.map(item=>item.name).join(' · '))+'</p><div class="row between"><strong>'+money(quote.total)+
-    '</strong><button class="btn" data-quote="'+esc(quote.id)+'" onclick="openCustomerQuote(this.dataset.quote)">Ver orçamento</button></div></article>'
+    '</strong><button class="btn" data-quote="'+esc(quote.id)+'" onclick="openCustomerQuote(this.dataset.quote)">Ver orçamento</button>'+quotePaymentButton(quote)+'</div></article>'
   ).join(''):'<p>Você ainda não enviou nenhum orçamento.</p>');
 };
 window.showCustomerQuotes=async function(){
@@ -4367,13 +4367,29 @@ window.showCustomerQuotes=async function(){
   customerQuotes=Array.isArray(data)?data:[];
   if(state.view==='account'&&accountTab==='quotes')render();
 };
+function quoteCanPreviewPayment(quote){
+  return ['sent','negotiating'].includes(quote.stage)&&Number.isFinite(Number(quote.total))&&Number(quote.total)>0;
+}
+function quotePaymentButton(quote){
+  return quoteCanPreviewPayment(quote)?'<button type="button" class="btn primary" data-quote="'+esc(quote.id)+
+    '" onclick="openCustomerQuotePayment(this.dataset.quote)">Efetuar pagamento</button>':'';
+}
+window.openCustomerQuotePayment=function(id){
+  const owner=currentCustomer()?.id;
+  if(!owner||owner!==customerQuotesOwner)return;
+  const quote=customerQuotes.find(item=>item.id===id);
+  if(!quote||!quoteCanPreviewPayment(quote))return;
+  modal('Pagamento do orçamento #'+esc(quote.number),quoteItemsMarkup(quote)+paymentPreviewOptions(),
+    '<button type="button" class="btn" data-quote="'+esc(id)+
+    '" onclick="openCustomerQuote(this.dataset.quote)">Voltar ao orçamento</button>',true);
+};
 window.openCustomerQuote=function(id){
   if(currentCustomer()?.id!==customerQuotesOwner)return;
   const quote=customerQuotes.find(item=>item.id===id);
   if(!quote)return;
   modal('Orçamento #'+esc(quote.number),'<span class="pill">'+quoteStageLabels[quote.stage]+'</span>'+quoteItemsMarkup(quote),
     quote.orderNumber?'<button class="btn primary" data-order="'+esc(quote.orderNumber)+
-      '" onclick="accountTab=\'orders\';go(\'account\');customerOrderDetail(this.dataset.order)">Acompanhar pedido #'+esc(quote.orderNumber)+'</button>':'',true);
+      '" onclick="accountTab=\'orders\';go(\'account\');customerOrderDetail(this.dataset.order)">Acompanhar pedido #'+esc(quote.orderNumber)+'</button>':quotePaymentButton(quote),true);
 };
 window.openCustomerOrderPaymentPreview=function(id){
   const order=ownedRepeatOrder(id);
