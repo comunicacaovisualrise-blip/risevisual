@@ -504,6 +504,45 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 @media(max-width:550px){.shop-header.retail-header>.mobile-product-trigger{top:-23px;height:24px;width:28px;min-width:28px!important}.retail-utility>span:first-child{padding-left:36px}.shop-header.retail-header .header-brand-group{justify-content:flex-start;justify-self:start}}
 
 /* Blend catalogue-category photos into their own pastel tile instead of a white rectangle. */
+.rise-site-footer .rise-footer-shortcuts {
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:6px 18px;
+  padding:8px 0;
+}
+.rise-site-footer .rise-footer-grid {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+  padding:15px 0;
+  text-align:center;
+}
+.rise-site-footer .rise-footer-brand {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.rise-site-footer .rise-footer-phone {justify-content:center}
+.rise-site-footer .rise-footer-socials {margin:6px auto 0;max-width:240px}
+.rise-site-footer .rise-footer-social {justify-content:center}
+.rise-site-footer .rise-payment-methods {margin:6px auto 0}
+.rise-site-footer .rise-footer-bottom {
+  justify-content:center;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:4px 14px;
+  padding:8px 0;
+  text-align:center;
+}
+@media (max-width:900px) {
+  .rise-site-footer .rise-footer-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:600px) {
+  .rise-site-footer .rise-footer-grid {gap:12px 8px;padding:12px 0}
+  .rise-site-footer .rise-footer-brand,
+  .rise-site-footer .rise-footer-payment {grid-column:1/-1}
+  .rise-site-footer .rise-footer-payment .rise-payment-methods {box-sizing:border-box}
+}
 section.kit-entry {
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
