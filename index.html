@@ -834,6 +834,7 @@ section.kit-entry > .btn .icon {width:14px;height:14px}
 .payment-preview-options{display:flex;flex-wrap:wrap;gap:10px;border:1px solid #dce3f4;border-radius:12px;padding:14px;margin:16px 0}.payment-preview-options legend{font-weight:700;padding:0 6px}.payment-preview-options label{display:flex;align-items:center;gap:7px;margin:0;padding:9px 12px;border-radius:8px;background:#f1f4ff;cursor:pointer}.payment-preview-options p{flex-basis:100%;margin:0}
 .crm-quote-card[data-crm-quote]{cursor:grab;position:relative;user-select:none}.crm-quote-grip{display:inline-grid;place-items:center;width:36px;height:36px;touch-action:none;color:#183477;margin-right:6px;cursor:grab;font-size:21px}.crm-quote-dragging{opacity:.48}.crm-board [data-quote-stage].crm-quote-drop{outline:2px solid #063bea;outline-offset:-2px;background:#eaf0ff}.crm-quote-ghost{position:fixed;left:0;top:0;z-index:5000;pointer-events:none;background:#07133b;color:#fff;border-radius:8px;padding:10px 14px;box-shadow:0 4px 14px #07133b44}
 .pill.customer-quote-status{font-weight:700}.pill.customer-quote-status--won{background:#dcfce7;color:#14532d}.pill.customer-quote-status--negotiating{background:#dbeafe;color:#1e3a8a}.pill.customer-quote-status--sent{background:#fef3c7;color:#78350f}.pill.customer-quote-status--lost{background:#fee2e2;color:#991b1b}.pill.customer-quote-status--refunded{background:#ede9fe;color:#5b21b6}.crm-quote-card.crm-quote-refunded{background:#f5f0ff;border-color:#a78bfa}.quote-refund-details{padding:14px;margin:12px 0;background:#f5f0ff;border-radius:8px;overflow-wrap:anywhere}
+.registered-client-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;align-items:end;margin-bottom:18px}.registered-client-filters label{display:grid;gap:5px}.registered-client-filters input,.registered-client-filters select{min-width:0;width:100%}.registered-client-row{flex-wrap:wrap;gap:12px}.registered-client-identity{display:flex;align-items:center;gap:10px;flex:1 1 180px;min-width:0;overflow-wrap:anywhere}.registered-client-identity .avatar{flex:none}.registered-client-identity p{margin:3px 0 0}
 </style></head><body><div id="app"></div><div id="overlay"></div><div id="toast" role="status"></div><script>const $=s=>document.querySelector(s),money=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),esc=s=>String(s??'').replace(/\bGIV(?: Online)?\b/g,'fornecedor').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const paths={grid:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',bag:'M5 7h14l1 14H4L5 7z M8 8V6a4 4 0 0 1 8 0v2',users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M15 3a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',box:'m3 7 9-4 9 4v10l-9 4-9-4V7z m0 0 9 4 9-4 M12 11v10 M7 5l10 4',chart:'M4 20h17 M7 16V9 M12 16V4 M17 16v-5',file:'M14 2H5v20h14V7l-5-5z M14 2v6h6 M8 12h8 M8 16h6',truck:'M1 4h13v13H1z M14 9h4l4 4v4h-8 M8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0',settings:'M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M5 19l2-2 M17 7l2-2',search:'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',bell:'M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3z M10 20h4',arrow:'M5 12h14 M14 7l5 5-5 5',plus:'M12 5v14 M5 12h14',wallet:'M3 5h17v15H3z M3 8h17 M15 12h7v5h-7z',check:'m5 12 4 4L20 5',clock:'M12 7v5l3 2 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',store:'M3 9h18l-2-6H5L3 9z M4 10v11h16V10 M9 21v-7h6v7',download:'M12 3v12 m-5-5 5 5 5-5 M4 17v4h16v-4',chevron:'m9 5 7 7-7 7',link:'M14 3h7v7 M21 3 10 14 M10 4H3v17h17v-7',mail:'M3 5h18v14H3z m0 0 9 8 9-8'};
 function icon(n){return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n]||paths.box}"/></svg>`}function logo(){return '<span class="rise-logo-frame"><img class="brand-image" src="assets/embedded/embedded-387a0c98344f77ab.png" alt="RISE — Comunicação Visual" width="1254" height="1254"></span>'}
@@ -3892,7 +3893,7 @@ async function loadCommercialData() {
   if (!adminSession) return;
   const client = window.riseSupabase;
   const [,deals,clients] = await Promise.all([
-    Promise.all([loadRemoteCrmQuotes(),loadRegisteredClients().catch(error=>console.warn('Clientes indisponíveis.',error))]),
+    Promise.all([loadRemoteCrmQuotes(),loadRegisteredClientCount().catch(error=>console.warn('Clientes indisponíveis.',error))]),
     client.from('rise_crm_deals').select('id,payload,revision').order('id',{ascending:true}),
     client.from('profiles').select('id,email,full_name,company_name,phone').eq('role','customer')
   ]);
@@ -4674,37 +4675,146 @@ go=function(view,...args){
 let registeredClientLoad;
 let registeredClientList=[];
 let registeredClientCount=null;
+let registeredClientLastPurchases=new Map();
 window.riseRegisteredClientCount=()=>registeredClientCount;
+async function loadRegisteredClientCount(){
+  const {count,error}=await window.riseSupabase.from('profiles').select('id',{count:'exact',head:true}).eq('role','customer');
+  if(error)throw error;
+  if(adminSession)registeredClientCount=count;
+}
+async function fetchRegisteredClientPages(makeQuery){
+  const pageSize=200,records=[];
+  for(let start=0;;start+=pageSize){
+    const {data,error}=await makeQuery().range(start,start+pageSize-1);
+    if(error)throw error;
+    records.push(...(data||[]));
+    if(!data||data.length<pageSize)return records;
+  }
+}
 function loadRegisteredClients(){
   if(!adminSession||!window.riseSupabase)return Promise.resolve([]);
   if(registeredClientLoad)return registeredClientLoad;
   registeredClientLoad=(async()=>{
-    const {data,error}=await window.riseSupabase.from('profiles')
-      .select('id,full_name,company_name,email,phone,created_at').eq('role','customer')
-      .order('full_name',{ascending:true});
-    if(error)throw error;
-    const clients=data||[];
-    if(adminSession){registeredClientList=clients;registeredClientCount=clients.length;}
-    return clients;
+    const client=window.riseSupabase;
+    const [profiles,purchases]=await Promise.all([
+      fetchRegisteredClientPages(()=>client.from('profiles').select('id,full_name,company_name,email,phone,document:details->>document,city:details->address->>city,uf:details->address->>uf,avatar:details->>avatar,trade_name:details->>tradeName')
+        .eq('role','customer').order('full_name').order('id')),
+      fetchRegisteredClientPages(()=>client.from('orders').select('id,customer_id,created_at,confirmed_at:manual_payment->>confirmedAt')
+        .eq('payment_status','paid').neq('status','Cancelado').is('archived_at',null).order('id'))
+    ]);
+    const latest=new Map();
+    for(const order of purchases){
+      const stamp=Date.parse(order.confirmed_at||order.created_at);
+      if(Number.isFinite(stamp)&&stamp>(latest.get(order.customer_id)??-Infinity))latest.set(order.customer_id,stamp);
+    }
+    if(adminSession){registeredClientList=profiles;registeredClientCount=profiles.length;registeredClientLastPurchases=latest;}
+    return profiles;
   })().finally(()=>{registeredClientLoad=null;});
   return registeredClientLoad;
 }
-window.openRegisteredClients=async function(){
+const clientDirectoryNormalize=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+const registeredClientCalendar=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'});
+function registeredClientDays(stamp,now=Date.now()){
+  if(stamp==null)return null;
+  const day=value=>{
+    const parts=Object.fromEntries(registeredClientCalendar.formatToParts(value).map(p=>[p.type,Number(p.value)]));
+    return Date.UTC(parts.year,parts.month-1,parts.day);
+  };
+  return Math.max(0,Math.round((day(now)-day(stamp))/86400000));
+}
+function registeredClientPurchaseLabel(days){
+  if(days===null)return 'Nunca comprou';
+  if(days===0)return 'Comprou hoje';
+  if(days===1)return 'Comprou ontem';
+  if(days<30)return 'Comprou há '+days+' dias';
+  const months=Math.floor(days/30);
+  return 'Comprou há '+months+(months===1?' mês':' meses');
+}
+function registeredClientPhoto(client){
+  const name=client.full_name||client.company_name||client.email||'Cliente';
+  const candidate=String(client.avatar||'');
+  let imageSource='';
+  if(/^data:image\/(png|jpeg|webp|gif);base64,[a-z0-9+/=]+$/i.test(candidate))imageSource=candidate;
+  else if(candidate){
+    try{
+      const url=new URL(candidate,location.origin);
+      if(url.protocol==='https:'&&[location.origin,'https://zcunyirxvvbgegncolkp.supabase.co'].includes(url.origin))imageSource=url.href;
+    }catch{}
+  }
+  const initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase();
+  return '<span class="avatar profile-avatar">'+(imageSource?'<img loading="lazy" src="'+esc(imageSource)+'" alt="">':esc(initials))+'</span>';
+}
+function registeredClientMatches(client,filters,days){
+  if(!clientDirectoryNormalize([client.full_name,client.company_name,client.trade_name,client.email].join(' ')).includes(filters.name))return false;
+  if(filters.document&&!String(client.document||'').replace(/\D/g,'').includes(filters.document))return false;
+  if(!clientDirectoryNormalize(client.city).includes(filters.city)||!clientDirectoryNormalize(client.uf).startsWith(filters.uf))return false;
+  const period=filters.period;
+  if(!period)return true;
+  if(period==='never')return days===null;
+  if(days===null)return false;
+  if(period==='30')return days<=30;
+  if(period==='60')return days>30&&days<=60;
+  if(period==='90')return days>60&&days<=90;
+  return days>90;
+}
+window.renderRegisteredClientDirectory=function(form){
+  if(!adminSession)return;
+  const host=document.getElementById('registeredClientResults');
+  if(!host)return;
+  const field=key=>form.elements.namedItem(key).value;
+  const filters={name:clientDirectoryNormalize(field('name')),document:field('document').replace(/\D/g,''),
+    city:clientDirectoryNormalize(field('city')),uf:clientDirectoryNormalize(field('uf')),period:field('period')};
+  const now=Date.now(),filtered=[];
+  for(const client of registeredClientList){
+    const stamp=registeredClientLastPurchases.get(client.id);
+    const days=registeredClientDays(stamp,now);
+    if(registeredClientMatches(client,filters,days))filtered.push({client,stamp,days});
+  }
+  document.getElementById('registeredClientResultCount').textContent=filtered.length+' de '+registeredClientList.length+' cliente(s)';
+  host.innerHTML=filtered.length?filtered.map(({client,stamp,days})=>
+    '<article class="detail-row registered-client-row"><div class="registered-client-identity">'+registeredClientPhoto(client)+
+    '<div><strong>'+esc(client.full_name||client.company_name||client.email)+'</strong><p class="hint">'+esc(
+      [client.city,client.uf].filter(Boolean).join(' · ')||client.email)+'</p></div></div><span class="pill '+(days===null?'gray':days<=30?'review-accepted':'blue')+
+    '"'+(stamp!=null?' title="'+esc(noticeDate(new Date(stamp).toISOString()))+'"':'')+'>'+registeredClientPurchaseLabel(days)+'</span>'+
+    '<button type="button" class="btn" data-client="'+esc(client.id)+'" onclick="openRegisteredClientDetails(this.dataset.client)">Mais informações</button></article>'
+  ).join(''):'<p>Nenhum cliente encontrado com esses filtros.</p>';
+};
+let registeredClientFilters={};
+window.openRegisteredClients=async function(restoreFilters=false){
   if(!adminSession)return;
   try{
-    const list=await loadRegisteredClients();
+    await loadRegisteredClients();
     if(!adminSession)return;
-    modal('Clientes cadastrados',list.length?list.map(client=>
-      '<div class="detail-row"><div><strong>'+esc(client.full_name||client.company_name||client.email)+'</strong><p class="hint">'+esc(client.email)+'</p></div>'+
-      '<button type="button" class="btn" data-client="'+esc(client.id)+'" onclick="openRegisteredClientDetails(this.dataset.client)">Mais informações</button></div>'
-    ).join(''):'<p>Nenhum cliente cadastrado.</p>','',true);
+    if(!restoreFilters)registeredClientFilters={};
+    const filters='<form id="registeredClientFilters" class="registered-client-filters" onsubmit="event.preventDefault()" oninput="renderRegisteredClientDirectory(this)">'+
+      '<label>Nome ou e-mail<input name="name" type="search" placeholder="Nome, empresa ou e-mail"></label>'+
+      '<label>CPF ou CNPJ<input name="document" type="search" inputmode="numeric" placeholder="Número do documento"></label>'+
+      '<label>Cidade<input name="city" type="search" placeholder="Cidade do cliente"></label>'+
+      '<label>UF<input name="uf" type="search" maxlength="2" placeholder="Ex.: MT"></label>'+
+      '<label>Última compra<select name="period"><option value="">Todas</option><option value="30">Até 30 dias</option>'+
+      '<option value="60">31 a 60 dias</option><option value="90">61 a 90 dias</option>'+
+      '<option value="older">Mais de 90 dias</option><option value="never">Nunca comprou</option></select></label>'+
+      '<button type="button" class="btn" onclick="this.form.reset();renderRegisteredClientDirectory(this.form)">Limpar filtros</button></form>'+
+      '<p class="hint" id="registeredClientResultCount" role="status"></p><div id="registeredClientResults"></div>';
+    modal('Clientes cadastrados',filters,'',true);
+    const form=document.getElementById('registeredClientFilters');
+    if(!form)return;
+    for(const [key,value] of Object.entries(registeredClientFilters))form.elements.namedItem(key).value=value;
+    window.renderRegisteredClientDirectory(form);
   }catch(error){toast('Não foi possível carregar os clientes: '+error.message)}
 };
 window.openRegisteredClientDetails=async function(id){
-  if(!adminSession||!registeredClientList.some(client=>client.id===id))return;
+  const listClient=registeredClientList.find(client=>client.id===id);
+  if(!adminSession||!listClient)return;
+  const filters=document.getElementById('registeredClientFilters');
+  if(filters)registeredClientFilters=Object.fromEntries(new FormData(filters));
   try{
-    const {data:client,error}=await window.riseSupabase.from('profiles').select('full_name,company_name,email,phone,created_at,details')
-      .eq('role','customer').eq('id',id).single();
+    const api=window.riseSupabase;
+    const [{data:client,error},{data:orders,error:ordersError}]=await Promise.all([
+      api.from('profiles').select('full_name,company_name,email,phone,created_at,details').eq('role','customer').eq('id',id).single(),
+      api.from('orders').select('order_number,total,status,payment_status,created_at,order_items(product_name)')
+        .eq('customer_id',id).is('archived_at',null).order('created_at',{ascending:false}).limit(10)
+    ]);
     if(error)throw error;
     if(!adminSession)return;
     const info=client.details||{},addr=info.address||{};
@@ -4718,9 +4828,15 @@ window.openRegisteredClientDetails=async function(id){
     const digits=String(info.mobile||client.phone||'').replace(/\D/g,'');
     const phone=digits.length<=11?'55'+digits:digits;
     const contact=digits.length>=10?'<p><a class="btn" href="tel:+'+phone+'">Ligar</a> <a class="btn" href="https://wa.me/'+phone+'" target="_blank" rel="noopener noreferrer">WhatsApp</a></p>':'';
-    modal('Dados do cliente',contact+rows.filter(([,value])=>value!=null&&value!=='').map(([label,value])=>
-      '<div class="detail-row"><span>'+label+'</span><strong>'+esc(String(value))+'</strong></div>').join(''),
-      '<button type="button" class="btn" onclick="openRegisteredClients()">Voltar aos clientes</button>',true);
+    const purchase=registeredClientPurchaseLabel(registeredClientDays(registeredClientLastPurchases.get(id)));
+    const recent=ordersError?'<p>Não foi possível carregar os pedidos recentes.</p>':orders?.length?orders.map(order=>
+      '<article class="detail-row registered-client-row"><div><strong>Pedido #'+esc(order.order_number)+'</strong><p class="hint">'+esc(noticeDate(order.created_at))+' · '+esc((order.order_items||[]).map(item=>item.product_name).join(' · '))+'</p><p>'+esc(order.status)+' · '+money(order.total)+'</p></div>'+
+      (state.orders.some(item=>String(item.id)===String(order.order_number))?'<button type="button" class="btn" data-order="'+esc(order.order_number)+'" onclick="orderDetail(this.dataset.order)">Ver pedido</button>':'')+'</article>'
+    ).join(''):'<p>Nenhum pedido registrado para este cliente.</p>';
+    const heading='<div class="registered-client-identity">'+registeredClientPhoto({...listClient,avatar:info.avatar||listClient.avatar})+'<div><strong>'+esc(client.full_name||client.company_name||client.email)+'</strong><p class="hint">'+purchase+'</p></div></div>';
+    modal('Dados do cliente',heading+contact+rows.filter(([,value])=>value!=null&&value!=='').map(([label,value])=>
+      '<div class="detail-row"><span>'+label+'</span><strong>'+esc(String(value))+'</strong></div>').join('')+'<h3>Últimos pedidos</h3>'+recent,
+      '<button type="button" class="btn" onclick="openRegisteredClients(true)">Voltar aos clientes</button>',true);
   }catch(error){toast('Não foi possível carregar os dados do cliente: '+error.message)}
 };
 window.crmQuoteTotalsForOverview=function(){
