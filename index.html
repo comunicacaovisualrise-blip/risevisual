@@ -504,6 +504,29 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 @media(max-width:550px){.shop-header.retail-header>.mobile-product-trigger{top:-23px;height:24px;width:28px;min-width:28px!important}.retail-utility>span:first-child{padding-left:36px}.shop-header.retail-header .header-brand-group{justify-content:flex-start;justify-self:start}}
 
 /* Blend catalogue-category photos into their own pastel tile instead of a white rectangle. */
+section.kit-entry {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:4px 12px;
+  padding:clamp(12px,2vw,20px);
+}
+section.kit-entry > div {display:contents}
+section.kit-entry .eyebrow {grid-area:1 / 1 / 2 / -1;margin:0}
+section.kit-entry h2 {
+  grid-area:2 / 1;
+  margin:0;
+  font-size:clamp(17px,4.5vw,28px);
+}
+section.kit-entry p {grid-area:3 / 1 / 4 / -1}
+section.kit-entry > .btn {
+  grid-area:2 / 2;
+  gap:5px;
+  padding:7px clamp(7px,1.5vw,14px);
+  font-size:clamp(10px,2.8vw,13px);
+  white-space:nowrap;
+}
+section.kit-entry > .btn .icon {width:14px;height:14px}
 .customer-product-menu .menu-collapse {
   display:grid;
   place-items:center;
