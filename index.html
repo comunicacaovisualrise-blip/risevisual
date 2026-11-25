@@ -262,6 +262,8 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 .product-admin-grid .catalog-draggable{cursor:grab;-webkit-touch-callout:none;touch-action:pan-y}
 .catalog-draggable> .catalog-card-carousel,.catalog-draggable .catalog-cover-image{user-select:none;-webkit-user-drag:none}
 .catalog-draggable button,.catalog-draggable a{cursor:pointer}
+.catalog-drag-handle{position:absolute;top:10px;left:105px;z-index:5;display:grid;place-items:center;width:42px;height:42px;border:1px solid #dce3f4;border-radius:9px;background:#fff;color:#050d38;cursor:grab;touch-action:none;user-select:none;font:22px/1 Arial,sans-serif}
+@media(max-width:760px){.catalog-order-controls>button{width:40px;height:40px}.catalog-drag-handle{left:128px}}
 .product-admin-grid .catalog-drag-source{opacity:.3;outline:2px dashed #063bea;outline-offset:-2px}
 .product-admin-grid .catalog-drag-target{outline:3px solid #063bea;outline-offset:3px;box-shadow:0 0 0 7px #063bea12}
 .catalog-drag-ghost{position:fixed!important;z-index:2147483000;pointer-events:none!important;margin:0!important;opacity:.94;overflow:hidden;background:white;border:2px solid #063bea;border-radius:12px;box-shadow:0 22px 55px #050d3840;transform:rotate(1deg) scale(1.02)}
@@ -1867,9 +1869,9 @@ galleryMediaEditorCard=function(...args){let html=mediaEditorBeforeVisibleOrderi
 /* Press-and-hold product ordering for mouse, pen and touch. */
 let catalogDrag=null;
 const adminProductsBeforeDragOrder=adminProducts;
-adminProducts=function(){let index=0;return adminProductsBeforeDragOrder().replace(/<div class="catalog-order-controls"[\s\S]*?<\/div>/g,'').replace(/<article class="product-tile">/g,tag=>{const p=products[index++];return !adminSession||!p?tag:'<article class="product-tile catalog-draggable" data-catalog-drag-id="'+Number(p.id)+'" tabindex="0" aria-label="'+esc(p.name)+' · segure para arrastar e reorganizar" title="Segure o card para arrastar. Pelo teclado: Alt + seta para cima ou para baixo." onpointerdown="startCatalogDrag(event,this)" ondragstart="return false" onkeydown="catalogDragKey(event,this)">'} )};
+adminProducts=function(){let index=0;return adminProductsBeforeDragOrder().replace(/<article class="product-tile">/g,tag=>{const p=products[index++];return !adminSession||!p?tag:'<article class="product-tile catalog-draggable" data-catalog-drag-id="'+Number(p.id)+'" tabindex="0" aria-label="'+esc(p.name)+' · segure para arrastar e reorganizar" title="Segure o card para arrastar. Pelo teclado: Alt + seta para cima ou para baixo." onpointerdown="startCatalogDrag(event,this)" ondragstart="return false" onkeydown="catalogDragKey(event,this)"><span class="catalog-drag-handle" aria-hidden="true" title="Arrastar para reorganizar">↕</span>'} )};
 async function catalogDragKey(event,card){if(!adminSession||!event.altKey||!['ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();const id=card.dataset.catalogDragId;await moveCatalogProduct(id,event.key==='ArrowUp'?-1:1);document.querySelector('[data-catalog-drag-id="'+id+'"]')?.focus()}
-function startCatalogDrag(event,card){if(!adminSession||imageBusy||event.button>0||event.isPrimary===false||event.target.closest('button,a,input,select,textarea,label'))return;if(catalogDrag)endCatalogDrag(null,true);const d={card,id:card.dataset.catalogDragId,pointer:event.pointerId,x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,active:false,target:null,snapshot:JSON.stringify(catalogMetadata())};catalogDrag=d;d.timer=setTimeout(()=>activateCatalogDrag(d),330)}
+function startCatalogDrag(event,card){if(!adminSession||imageBusy||event.button>0||event.isPrimary===false||event.target.closest('button,a,input,select,textarea,label'))return;if(catalogDrag)endCatalogDrag(null,true);const d={card,id:card.dataset.catalogDragId,pointer:event.pointerId,x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,active:false,target:null,snapshot:JSON.stringify(catalogMetadata())};catalogDrag=d;if(event.target.closest(".catalog-drag-handle")){event.preventDefault();activateCatalogDrag(d)}else d.timer=setTimeout(()=>activateCatalogDrag(d),330)}
 function activateCatalogDrag(d){if(catalogDrag!==d||!adminSession||imageBusy||!d.card.isConnected)return;d.active=true;const rect=d.card.getBoundingClientRect();d.offsetX=d.startX-rect.left;d.offsetY=d.startY-rect.top;const ghost=d.card.cloneNode(true);ghost.removeAttribute('id');ghost.removeAttribute('onpointerdown');ghost.removeAttribute('onkeydown');ghost.classList.add('catalog-drag-ghost');ghost.style.width=rect.width+'px';ghost.style.height=rect.height+'px';document.body.appendChild(ghost);d.ghost=ghost;d.card.classList.add('catalog-drag-source');d.card.setAttribute('aria-grabbed','true');document.body.classList.add('catalog-is-dragging');try{d.card.setPointerCapture(d.pointer)}catch{}positionCatalogDrag(d);d.scrollFrame=requestAnimationFrame(tickCatalogDragScroll)}
 function positionCatalogDrag(d){if(d.ghost){d.ghost.style.left=(d.x-d.offsetX)+'px';d.ghost.style.top=(d.y-d.offsetY)+'px'}const hit=document.elementFromPoint(d.x,d.y)?.closest('.product-admin-grid .catalog-draggable');if(d.target!==hit){d.target?.classList.remove('catalog-drag-target');d.target=hit&&hit!==d.card?hit:null;d.target?.classList.add('catalog-drag-target')}}
 function tickCatalogDragScroll(){const d=catalogDrag;if(!d?.active)return;const edge=72,height=window.innerHeight;let dy=0;if(d.y<edge)dy=-Math.ceil((edge-d.y)/5);else if(d.y>height-edge)dy=Math.ceil((d.y-height+edge)/5);if(dy){window.scrollBy(0,dy);positionCatalogDrag(d)}d.scrollFrame=requestAnimationFrame(tickCatalogDragScroll)}
@@ -3573,7 +3575,10 @@ async function loadPublishedCatalogOrder() {
   const {data,error} = await window.riseSupabase.from('site_settings')
     .select('value').eq('setting_key','catalog_order').maybeSingle();
   if (error) throw error;
-  if (Array.isArray(data?.value)) state.settings.catalogOrder = data.value;
+  if (Array.isArray(data?.value)) {
+    state.settings.catalogOrder = data.value;
+    applyCatalogDisplayOrder();
+  }
 }
 let catalogOrderSaving = false;
 async function saveCatalogDisplayOrder(next) {
