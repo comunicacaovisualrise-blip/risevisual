@@ -833,6 +833,7 @@ section.kit-entry > .btn .icon {width:14px;height:14px}
 .signup-confirmation{margin:32px auto;padding:clamp(20px,5vw,40px);max-width:540px}.signup-confirmation p{margin:12px 0 20px;overflow-wrap:anywhere}.mobile-customer-greeting{display:none}@media(max-width:800px){.retail-header .header-actions{position:relative}.retail-header.has-customer-session .header-actions{padding-top:12px}.retail-header .mobile-customer-greeting{display:block;position:absolute;left:0;top:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:700;color:#07113b}}
 .payment-preview-options{display:flex;flex-wrap:wrap;gap:10px;border:1px solid #dce3f4;border-radius:12px;padding:14px;margin:16px 0}.payment-preview-options legend{font-weight:700;padding:0 6px}.payment-preview-options label{display:flex;align-items:center;gap:7px;margin:0;padding:9px 12px;border-radius:8px;background:#f1f4ff;cursor:pointer}.payment-preview-options p{flex-basis:100%;margin:0}
 .crm-quote-card[data-crm-quote]{cursor:grab;position:relative;user-select:none}.crm-quote-grip{display:inline-grid;place-items:center;width:36px;height:36px;touch-action:none;color:#183477;margin-right:6px;cursor:grab;font-size:21px}.crm-quote-dragging{opacity:.48}.crm-board [data-quote-stage].crm-quote-drop{outline:2px solid #063bea;outline-offset:-2px;background:#eaf0ff}.crm-quote-ghost{position:fixed;left:0;top:0;z-index:5000;pointer-events:none;background:#07133b;color:#fff;border-radius:8px;padding:10px 14px;box-shadow:0 4px 14px #07133b44}
+.pill.customer-quote-status{font-weight:700}.pill.customer-quote-status--won{background:#dcfce7;color:#14532d}.pill.customer-quote-status--negotiating{background:#dbeafe;color:#1e3a8a}.pill.customer-quote-status--sent{background:#fef3c7;color:#78350f}.pill.customer-quote-status--lost{background:#fee2e2;color:#991b1b}
 </style></head><body><div id="app"></div><div id="overlay"></div><div id="toast" role="status"></div><script>const $=s=>document.querySelector(s),money=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),esc=s=>String(s??'').replace(/\bGIV(?: Online)?\b/g,'fornecedor').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const paths={grid:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',bag:'M5 7h14l1 14H4L5 7z M8 8V6a4 4 0 0 1 8 0v2',users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M15 3a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',box:'m3 7 9-4 9 4v10l-9 4-9-4V7z m0 0 9 4 9-4 M12 11v10 M7 5l10 4',chart:'M4 20h17 M7 16V9 M12 16V4 M17 16v-5',file:'M14 2H5v20h14V7l-5-5z M14 2v6h6 M8 12h8 M8 16h6',truck:'M1 4h13v13H1z M14 9h4l4 4v4h-8 M8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0',settings:'M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M5 19l2-2 M17 7l2-2',search:'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',bell:'M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3z M10 20h4',arrow:'M5 12h14 M14 7l5 5-5 5',plus:'M12 5v14 M5 12h14',wallet:'M3 5h17v15H3z M3 8h17 M15 12h7v5h-7z',check:'m5 12 4 4L20 5',clock:'M12 7v5l3 2 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',store:'M3 9h18l-2-6H5L3 9z M4 10v11h16V10 M9 21v-7h6v7',download:'M12 3v12 m-5-5 5 5 5-5 M4 17v4h16v-4',chevron:'m9 5 7 7-7 7',link:'M14 3h7v7 M21 3 10 14 M10 4H3v17h17v-7',mail:'M3 5h18v14H3z m0 0 9 8 9-8'};
 function icon(n){return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n]||paths.box}"/></svg>`}function logo(){return '<span class="rise-logo-frame"><img class="brand-image" src="assets/embedded/embedded-387a0c98344f77ab.png" alt="RISE — Comunicação Visual" width="1254" height="1254"></span>'}
@@ -4500,13 +4501,15 @@ document.addEventListener('pointercancel',event=>{if(quoteDrag?.pointer===event.
 document.addEventListener('keydown',event=>{if(event.key==='Escape')clearQuoteDrag()});
 window.addEventListener('blur',clearQuoteDrag);
 let customerQuotesOwner='',customerQuotes=[],customerQuotesState='idle';
+function customerQuoteStatusBadge(stage){
+  return '<span class="pill customer-quote-status customer-quote-status--'+esc(stage)+'">'+esc(quoteStageLabels[stage]||'Status indisponível')+'</span>';
+}
 window.customerQuoteListMarkup=function(){
   const owner=currentCustomer()?.id;
   if(owner!==customerQuotesOwner||customerQuotesState==='idle')return '<h2>Meus orçamentos</h2><p role="status">Carregando orçamentos…</p>';
   if(customerQuotesState==='error')return '<h2>Meus orçamentos</h2><p>Não foi possível carregar os orçamentos.</p><button class="btn" onclick="showCustomerQuotes()">Tentar novamente</button>';
   return '<h2>Meus orçamentos</h2>'+(customerQuotes.length?customerQuotes.map(quote=>
-    '<article class="customer-order"><div class="row between"><h3>Orçamento #'+esc(quote.number)+'</h3><span class="pill">'+
-    quoteStageLabels[quote.stage]+'</span></div><p class="hint">'+esc(noticeDate(quote.createdAt))+'</p>'+
+    '<article class="customer-order"><div class="row between"><h3>Orçamento #'+esc(quote.number)+'</h3>'+customerQuoteStatusBadge(quote.stage)+'</div><p class="hint">'+esc(noticeDate(quote.createdAt))+'</p>'+
     '<p>'+esc(quote.items.map(item=>item.name).join(' · '))+'</p><div class="row between"><strong>'+money(quote.total)+
     '</strong><button class="btn" data-quote="'+esc(quote.id)+'" onclick="openCustomerQuote(this.dataset.quote)">Ver orçamento</button>'+quotePaymentButton(quote)+'</div></article>'
   ).join(''):'<p>Você ainda não enviou nenhum orçamento.</p>');
@@ -4543,7 +4546,7 @@ window.openCustomerQuote=function(id){
   if(currentCustomer()?.id!==customerQuotesOwner)return;
   const quote=customerQuotes.find(item=>item.id===id);
   if(!quote)return;
-  modal('Orçamento #'+esc(quote.number),'<span class="pill">'+quoteStageLabels[quote.stage]+'</span>'+quoteItemsMarkup(quote),
+  modal('Orçamento #'+esc(quote.number),customerQuoteStatusBadge(quote.stage)+quoteItemsMarkup(quote),
     quote.orderNumber?'<button class="btn primary" data-order="'+esc(quote.orderNumber)+
       '" onclick="accountTab=\'orders\';go(\'account\');customerOrderDetail(this.dataset.order)">Acompanhar pedido #'+esc(quote.orderNumber)+'</button>':quotePaymentButton(quote),true);
 };
