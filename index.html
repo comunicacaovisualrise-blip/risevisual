@@ -2802,22 +2802,30 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const riseRecoveryLink=/(?:[?#&])type=recovery(?:&|$)/.test(window.location.href);
 window.riseSupabase=createClient('https://zcunyirxvvbgegncolkp.supabase.co','sb_publishable_RK1TSDDZ-60RlOAiNZcW_g_oJXL25v1',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 window.riseSupabase.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(()=>window.riseSupabaseBridge.openPasswordRecovery(),0)});
+const sharedContentRequest = window.riseSupabaseBridge.loadSharedGlobalContent();
+const showcaseRequest = (async () => {
+  try {
+    publishedShowcase = await window.riseSupabaseBridge.readShowcase();
+    if (publishedShowcase === null) {
+      const sharedContent = await sharedContentRequest;
+      publishedShowcase = sharedContent.home && Array.isArray(homeCreative.videoShowcase)
+        ? homeCreative.videoShowcase : [];
+    }
+  } catch (error) {
+    console.warn('Falha ao buscar os vídeos publicados.', error);
+    publishedShowcase = [];
+  }
+  showcaseReady = true;
+  if (state.view === 'shop' && !document.getElementById('overlay')?.innerHTML) render();
+})();
+const sharedPricesRequest = loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
 try {
   await window.riseSupabaseBridge.loadSharedCatalog();
 } catch (error) {
   console.warn('Catálogo remoto indisponível. Carregando as demais áreas da loja.', error);
 }
 await window.riseSupabaseBridge.loadSharedProductMedia();
-await loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
-const sharedContent = await window.riseSupabaseBridge.loadSharedGlobalContent();
-try {
-  publishedShowcase = await window.riseSupabaseBridge.readShowcase()
-    ?? (sharedContent.home && Array.isArray(homeCreative.videoShowcase) ? homeCreative.videoShowcase : []);
-} catch (error) {
-  console.warn('Falha ao buscar os vídeos publicados.', error);
-  publishedShowcase = [];
-}
-showcaseReady = true;
+await Promise.all([sharedPricesRequest, sharedContentRequest, showcaseRequest]);
 const sessionResult=await window.riseSupabase.auth.getSession();
 if(riseRecoveryLink&&sessionResult.data.session){window.riseSupabaseBridge.openPasswordRecovery()}else if(sessionResult.data.session){try{const profile=await window.riseSupabaseBridge.profileQuery(sessionResult.data.session.user);window.riseSupabaseBridge.attachProfile(profile);await Promise.allSettled([window.riseSupabaseBridge.loadRemoteCart(),window.riseSupabaseBridge.loadRemoteOrders()]);if(profile.role==='admin')window.riseSupabaseBridge.syncCatalog().then(()=>window.riseSupabaseBridge.syncLocalProductMedia()).then(count=>{if(count)console.info(`Galeria RISE sincronizada: ${count} produto(s).`)}).catch(error=>console.warn('Não foi possível sincronizar o catálogo local.',error));render()}catch(error){console.warn('Não foi possível restaurar a sessão RISE.',error)}}else render();
 </script></body></html>
