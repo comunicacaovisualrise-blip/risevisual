@@ -515,7 +515,7 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
   border:0;
   border-radius:0;
   color:white;
-  background:radial-gradient(ellipse at center,#163b83,#050d38 64%);
+  background:radial-gradient(ellipse at center,#142b55,#050d26 70%);
   overflow:hidden;
   isolation:isolate;
 }
@@ -547,19 +547,26 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
   text-shadow:0 2px 18px #050d38;
 }
 .rise-about-portal::backdrop {background:#050d38d9}
-.rise-about-portal-name {
+.rise-about-portal-loader {
   display:block;
-  margin-bottom:14px;
-  color:#ff9b46;
-  font-size:clamp(11px,2.7vw,15px);
-  letter-spacing:.16em;
+  width:44px;
+  height:44px;
+  margin:24px auto 0;
+  border:2px solid #76a7ff55;
+  border-top-color:#9bdcff;
+  border-right-color:#ff963e;
+  border-radius:50%;
+  box-shadow:0 0 15px #76a7ff55,inset 0 0 10px #76a7ff44;
+  animation:risePortalSpin .9s linear infinite;
 }
+@keyframes risePortalSpin {to {transform:rotate(360deg)}}
 @keyframes risePortalOpen {
   0% {transform:scale(1);opacity:.45}
   100% {transform:scale(3);opacity:.85}
 }
 @media(prefers-reduced-motion:reduce) {
   .rise-about-portal::before,.rise-about-portal::after {animation:none;opacity:.35}
+  .rise-about-portal-loader {animation:none}
 }
 .rise-site-footer .rise-footer-shortcuts {
   justify-content:center;
@@ -3143,7 +3150,7 @@ go = function (view, ...args) {
   const portal = document.createElement('dialog');
   portal.className = 'rise-about-portal';
   portal.setAttribute('aria-labelledby','riseAboutPortalTitle');
-  portal.innerHTML = '<div><span class="rise-about-portal-name">RISE COMUNICAÇÃO VISUAL</span><h2 id="riseAboutPortalTitle" tabindex="-1" autofocus>Toda grande ideia merece ganhar o mundo.</h2></div>';
+  portal.innerHTML = '<div><h2 id="riseAboutPortalTitle" tabindex="-1" autofocus>Toda grande ideia merece ganhar o mundo.</h2><span class="rise-about-portal-loader" role="status" aria-label="Abrindo Sobre nós"></span></div>';
   document.body.append(portal);
   activeAboutPortal = portal;
   let timer;
