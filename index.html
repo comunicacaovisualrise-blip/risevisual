@@ -1267,7 +1267,35 @@ let retailCatalogState={query:'',category:''};
 function retailNormalize(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()}
 function retailCatalogProducts(){const q=retailNormalize(retailCatalogState.query);return products.filter(p=>(!retailCatalogState.category||p.cat===retailCatalogState.category)&&(!q||retailNormalize(p.name+' '+p.cat).includes(q)))}
 function retailProductVisual(p,unique){const media=(p.images||[]).find(m=>!m.model&&!m.size&&m.kind!=='video');if(media)return '<img src="'+esc(media.data)+'" alt="'+esc(p.name)+'" loading="lazy" decoding="async">';return art(p.type,'retail'+unique)}
-function retailPrice(p){if(p.pricing){const rows=(p.pricing.rows||[]).filter(r=>Number(r.costTotal)>0);if(!rows.length)return {label:'Sob orçamento',quantity:''};const row=rows.reduce((a,b)=>Number(a.costTotal)<=Number(b.costTotal)?a:b);return {label:money(markupSale(row.costTotal,p.pricing.markup??3)),quantity:Number(row.quantity)===1?'1 '+([4,5].includes(p.id)?'conjunto':'unidade'):'lote de '+row.quantity+' '+([4,5].includes(p.id)?'conjuntos':'unidades')}}return {label:p.price>0?money(p.price):'Sob orçamento',quantity:''}}
+function retailPrice(p) {
+  const published = sharedSalePrices[p.id];
+  let price = Infinity;
+  let quantity = 0;
+  for (const [key, amount] of Object.entries(published || {})) {
+    if (!key.startsWith('[') || !Number.isFinite(amount) || amount <= 0) continue;
+    const count = Number(JSON.parse(key)[6]);
+    if (!Number.isSafeInteger(count) || count < 1) continue;
+    if (amount < price || (amount === price && count < quantity)) {
+      price = amount;
+      quantity = count;
+    }
+  }
+  if (!quantity && p.pricing) {
+    for (const row of p.pricing.rows || []) {
+      if (!(Number(row.costTotal) > 0)) continue;
+      const amount = productSaleForRow(p,row);
+      if (amount < price) {
+        price = amount;
+        quantity = Number(row.quantity);
+      }
+    }
+    if (!Number.isFinite(price)) return {label:'Sob orçamento',quantity:''};
+  }
+  if (!Number.isFinite(price)) return {label:p.price>0?money(p.price):'Sob orçamento',quantity:''};
+  const isSet = [4,5].includes(Number(p.id));
+  const unit = isSet ? 'conjunto' : 'unidade';
+  return {label:money(price),quantity:quantity===1?'1 '+unit:'lote de '+quantity+' '+unit+'s'};
+}
 function retailProductCard(p){const price=retailPrice(p);return '<article class="retail-product-card" data-product-id="'+p.id+'"><button class="retail-product-image" onclick="openMenuProduct('+p.id+')" aria-label="Ver '+esc(p.name)+'">'+retailProductVisual(p,'card'+p.id)+'</button><div class="retail-product-info"><span class="retail-product-category">'+esc(p.cat)+'</span><h3><button onclick="openMenuProduct('+p.id+')">'+esc(p.name)+'</button></h3><div class="retail-product-price"><small>'+(price.quantity?'A partir de':'Personalize seu projeto')+'</small><strong>'+esc(price.label)+'</strong>'+(price.quantity?'<span>/ '+esc(price.quantity)+'</span>':'')+'</div><button class="retail-personalize" onclick="openMenuProduct('+p.id+')">Escolher opções '+icon('arrow')+'</button></div></article>'}
 function retailCategoryTiles(){const groups=[...new Set(products.map(p=>p.cat))];return '<section class="retail-categories" aria-label="Categorias dos produtos">'+groups.map((cat,i)=>{const p=products.find(p=>p.cat===cat);return '<button class="retail-category" data-retail-category="'+esc(cat)+'" aria-pressed="'+(retailCatalogState.category===cat)+'" onclick="selectRetailCategory('+i+')"><span class="retail-category-image">'+retailProductVisual(p,'cat'+i)+'</span><span>'+esc(cat)+'</span></button>'}).join('')+'</section>'}
 function retailCampaignCard(c,i){const p=products.find(p=>p.id===Number(c.id));if(!p)return '';return '<article class="campaign-card retail-promo '+esc(c.theme||'light')+' '+(c.media?'has-uploaded-media':'')+'"><div class="campaign-visual">'+(c.media?mediaMarkup(c.media):retailProductVisual(p,'promo'+i))+'</div><div class="campaign-copy"><span class="campaign-kicker">'+esc(c.kicker||p.cat)+'</span><h2>'+esc(c.title||p.name).replace(/\n/g,'<br>')+'</h2>'+(c.copy?'<p>'+esc(c.copy)+'</p>':'')+'<button onclick="openMenuProduct('+p.id+')">'+esc(c.button||'Conhecer produto')+' '+icon('arrow')+'</button></div></article>'}
@@ -1828,7 +1856,7 @@ function currentCartItemPhoto(item){const photo=currentVariantCartMedia(item);re
 selectedOrderPhoto=function(){if(!config?.p)return null;return currentVariantCartMedia({id:config.p.id,configuration:{model:config.model,size:config.size,widthCm:config.size==='Personalizado'?config.w:null,heightCm:config.size==='Personalizado'?config.h:null}})};
 
 function applyCatalogDisplayOrder(){const order=state.settings?.catalogOrder;if(!Array.isArray(order))return;const rank=new Map(order.map((id,i)=>[String(id),i]));products.sort((a,b)=>(rank.get(String(a.id))??Number.MAX_SAFE_INTEGER)-(rank.get(String(b.id))??Number.MAX_SAFE_INTEGER))}
-function moveCatalogProduct(id,direction){if(!adminSession||imageBusy||![-1,1].includes(direction))return;applyCatalogDisplayOrder();const index=products.findIndex(p=>String(p.id)===String(id)),next=index+direction;if(index<0||next<0||next>=products.length)return;const oldProducts=[...products],oldSettings=state.settings,expected=auditSnapshot();[products[index],products[next]]=[products[next],products[index]];state.settings={...oldSettings,catalogOrder:products.map(p=>p.id)};try{auditWriteState(expected)}catch(e){products=oldProducts;state.settings=oldSettings;return toast('Não foi possível salvar a ordem. '+e.message)}render();toast('Posição do produto atualizada na loja e no painel.')}
+async function moveCatalogProduct(id,direction){if(!adminSession||imageBusy||catalogOrderSaving||![-1,1].includes(direction))return;applyCatalogDisplayOrder();const index=products.findIndex(p=>String(p.id)===String(id)),target=products[index+direction];if(index>=0&&target)await reorderCatalogAtTarget(id,target.id)}
 const adminProductsBeforeOrderControls=adminProducts;
 adminProducts=function(){applyCatalogDisplayOrder();let index=0;return adminProductsBeforeOrderControls().replace(/<article class="product-tile">/g,tag=>{const i=index++,p=products[i];return tag+(adminSession&&p?'<div class="catalog-order-controls" aria-label="Posição de '+esc(p.name)+'"><span>'+(i+1)+'</span><button type="button" onclick="moveCatalogProduct('+Number(p.id)+',-1)" aria-label="Mover '+esc(p.name)+' para antes" title="Mover para antes" '+(i===0?'disabled':'')+'>↑</button><button type="button" onclick="moveCatalogProduct('+Number(p.id)+',1)" aria-label="Mover '+esc(p.name)+' para depois" title="Mover para depois" '+(i===products.length-1?'disabled':'')+'>↓</button></div>':'')})};
 const renderBeforeCatalogOrder=render;
@@ -1840,13 +1868,13 @@ galleryMediaEditorCard=function(...args){let html=mediaEditorBeforeVisibleOrderi
 let catalogDrag=null;
 const adminProductsBeforeDragOrder=adminProducts;
 adminProducts=function(){let index=0;return adminProductsBeforeDragOrder().replace(/<div class="catalog-order-controls"[\s\S]*?<\/div>/g,'').replace(/<article class="product-tile">/g,tag=>{const p=products[index++];return !adminSession||!p?tag:'<article class="product-tile catalog-draggable" data-catalog-drag-id="'+Number(p.id)+'" tabindex="0" aria-label="'+esc(p.name)+' · segure para arrastar e reorganizar" title="Segure o card para arrastar. Pelo teclado: Alt + seta para cima ou para baixo." onpointerdown="startCatalogDrag(event,this)" ondragstart="return false" onkeydown="catalogDragKey(event,this)">'} )};
-function catalogDragKey(event,card){if(!adminSession||!event.altKey||!['ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();const id=card.dataset.catalogDragId;moveCatalogProduct(id,event.key==='ArrowUp'?-1:1);document.querySelector('[data-catalog-drag-id="'+id+'"]')?.focus()}
+async function catalogDragKey(event,card){if(!adminSession||!event.altKey||!['ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();const id=card.dataset.catalogDragId;await moveCatalogProduct(id,event.key==='ArrowUp'?-1:1);document.querySelector('[data-catalog-drag-id="'+id+'"]')?.focus()}
 function startCatalogDrag(event,card){if(!adminSession||imageBusy||event.button>0||event.isPrimary===false||event.target.closest('button,a,input,select,textarea,label'))return;if(catalogDrag)endCatalogDrag(null,true);const d={card,id:card.dataset.catalogDragId,pointer:event.pointerId,x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,active:false,target:null,snapshot:JSON.stringify(catalogMetadata())};catalogDrag=d;d.timer=setTimeout(()=>activateCatalogDrag(d),330)}
 function activateCatalogDrag(d){if(catalogDrag!==d||!adminSession||imageBusy||!d.card.isConnected)return;d.active=true;const rect=d.card.getBoundingClientRect();d.offsetX=d.startX-rect.left;d.offsetY=d.startY-rect.top;const ghost=d.card.cloneNode(true);ghost.removeAttribute('id');ghost.removeAttribute('onpointerdown');ghost.removeAttribute('onkeydown');ghost.classList.add('catalog-drag-ghost');ghost.style.width=rect.width+'px';ghost.style.height=rect.height+'px';document.body.appendChild(ghost);d.ghost=ghost;d.card.classList.add('catalog-drag-source');d.card.setAttribute('aria-grabbed','true');document.body.classList.add('catalog-is-dragging');try{d.card.setPointerCapture(d.pointer)}catch{}positionCatalogDrag(d);d.scrollFrame=requestAnimationFrame(tickCatalogDragScroll)}
 function positionCatalogDrag(d){if(d.ghost){d.ghost.style.left=(d.x-d.offsetX)+'px';d.ghost.style.top=(d.y-d.offsetY)+'px'}const hit=document.elementFromPoint(d.x,d.y)?.closest('.product-admin-grid .catalog-draggable');if(d.target!==hit){d.target?.classList.remove('catalog-drag-target');d.target=hit&&hit!==d.card?hit:null;d.target?.classList.add('catalog-drag-target')}}
 function tickCatalogDragScroll(){const d=catalogDrag;if(!d?.active)return;const edge=72,height=window.innerHeight;let dy=0;if(d.y<edge)dy=-Math.ceil((edge-d.y)/5);else if(d.y>height-edge)dy=Math.ceil((d.y-height+edge)/5);if(dy){window.scrollBy(0,dy);positionCatalogDrag(d)}d.scrollFrame=requestAnimationFrame(tickCatalogDragScroll)}
 function moveCatalogDrag(event){const d=catalogDrag;if(!d||event.pointerId!==d.pointer)return;d.x=event.clientX;d.y=event.clientY;if(!d.active){if(Math.hypot(d.x-d.startX,d.y-d.startY)>9)endCatalogDrag(null,true);return}event.preventDefault();event.stopPropagation();positionCatalogDrag(d)}
-function reorderCatalogAtTarget(sourceId,targetId,snapshot){if(!adminSession||imageBusy)return false;if(snapshot!==undefined&&JSON.stringify(catalogMetadata())!==snapshot){toast('Os produtos mudaram durante o movimento. Tente novamente.');return false}const source=products.findIndex(p=>String(p.id)===String(sourceId)),target=products.findIndex(p=>String(p.id)===String(targetId));if(source<0||target<0||source===target)return false;const old=[...products],oldSettings=state.settings,expected=auditSnapshot();const next=[...products],item=next.splice(source,1)[0];next.splice(target,0,item);products=next;state.settings={...oldSettings,catalogOrder:next.map(p=>p.id)};try{auditWriteState(expected)}catch(e){products=old;state.settings=oldSettings;toast('Não foi possível salvar a posição. '+e.message);return false}render();toast('Nova posição salva.');return true}
+function reorderCatalogAtTarget(sourceId,targetId,snapshot){if(!adminSession||imageBusy||catalogOrderSaving)return false;if(snapshot!==undefined&&JSON.stringify(catalogMetadata())!==snapshot){toast('Os produtos mudaram durante o movimento. Tente novamente.');return false}const source=products.findIndex(p=>String(p.id)===String(sourceId)),target=products.findIndex(p=>String(p.id)===String(targetId));if(source<0||target<0||source===target)return false;const next=[...products],item=next.splice(source,1)[0];next.splice(target,0,item);return saveCatalogDisplayOrder(next)}
 function endCatalogDrag(event,cancel=false){const d=catalogDrag;if(!d||event&&event.pointerId!==d.pointer)return;catalogDrag=null;clearTimeout(d.timer);if(d.scrollFrame)cancelAnimationFrame(d.scrollFrame);d.ghost?.remove();d.target?.classList.remove('catalog-drag-target');d.card.classList.remove('catalog-drag-source');d.card.removeAttribute('aria-grabbed');document.body.classList.remove('catalog-is-dragging');try{d.card.releasePointerCapture(d.pointer)}catch{}if(d.active){if(event){event.preventDefault();event.stopImmediatePropagation()}document.addEventListener('click',suppressCatalogDragClick,{capture:true,once:true});setTimeout(()=>document.removeEventListener('click',suppressCatalogDragClick,true),250);if(!cancel&&d.target)reorderCatalogAtTarget(d.id,d.target.dataset.catalogDragId,d.snapshot)}}
 function suppressCatalogDragClick(event){event.preventDefault();event.stopImmediatePropagation()}
 document.addEventListener('pointermove',moveCatalogDrag,{capture:true,passive:false});
@@ -3534,6 +3562,39 @@ saveOrder = async function (id) {
     statusSyncInFlight.delete(order.remoteId);
   }
 };
+async function loadPublishedCatalogOrder() {
+  const {data,error} = await window.riseSupabase.from('site_settings')
+    .select('value').eq('setting_key','catalog_order').maybeSingle();
+  if (error) throw error;
+  if (Array.isArray(data?.value)) state.settings.catalogOrder = data.value;
+}
+let catalogOrderSaving = false;
+async function saveCatalogDisplayOrder(next) {
+  if (!adminSession || catalogOrderSaving) return false;
+  if (!window.riseSupabase) {
+    toast('Conecte-se ao site para publicar a ordem dos produtos.');
+    return false;
+  }
+  catalogOrderSaving = true;
+  try {
+    const order = next.map(product => product.id);
+    const {data,error} = await window.riseSupabase.from('site_settings')
+      .upsert({setting_key:'catalog_order',value:order},{onConflict:'setting_key'})
+      .select('value').single();
+    if (error) throw error;
+    state.settings.catalogOrder = data.value;
+    applyCatalogDisplayOrder();
+    render();
+    toast('Ordem publicada para todos os aparelhos.');
+    return true;
+  } catch (error) {
+    toast('Não foi possível publicar a ordem: ' + error.message);
+    return false;
+  } finally {
+    catalogOrderSaving = false;
+  }
+}
+
 async function loadPublishedDelivery() {
   const {data,error} = await window.riseSupabase.from('site_settings')
     .select('value').eq('setting_key','checkout_delivery').maybeSingle();
@@ -3643,6 +3704,7 @@ const showcaseRequest = (async () => {
   if (state.view === 'shop' && !document.getElementById('overlay')?.innerHTML) render();
 })();
 const sharedPricesRequest = loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
+const sharedCatalogOrderRequest = loadPublishedCatalogOrder().catch(error => console.warn("Ordem compartilhada indisponível.",error));
 const sharedDeliveryRequest = loadPublishedDelivery().catch(error => console.warn('Frete compartilhado indisponível.',error));
 const productVisibilityRequest = loadPublishedProductVisibility().catch(error =>
   console.warn('Status dos produtos indisponível.', error));
@@ -3654,7 +3716,7 @@ try {
 await window.riseSupabaseBridge.loadSharedProductMedia();
 publicCoversReady = true;
 if (state.view === 'shop' && !document.getElementById('overlay')?.innerHTML) render();
-await Promise.all([sharedPricesRequest, sharedContentRequest, showcaseRequest, productVisibilityRequest, sharedDeliveryRequest]);
+await Promise.all([sharedPricesRequest, sharedCatalogOrderRequest, sharedContentRequest, showcaseRequest, productVisibilityRequest, sharedDeliveryRequest]);
 const sessionResult=await window.riseSupabase.auth.getSession();
 if(riseRecoveryLink&&sessionResult.data.session){window.riseSupabaseBridge.openPasswordRecovery()}else if(sessionResult.data.session){try{const profile=await window.riseSupabaseBridge.profileQuery(sessionResult.data.session.user);window.riseSupabaseBridge.attachProfile(profile);await Promise.allSettled([window.riseSupabaseBridge.loadRemoteCart(),window.riseSupabaseBridge.loadRemoteOrders()]);if(profile.role==='admin')window.riseSupabaseBridge.syncCatalog().then(()=>window.riseSupabaseBridge.syncLocalProductMedia()).then(count=>{if(count)console.info(`Galeria RISE sincronizada: ${count} produto(s).`)}).catch(error=>console.warn('Não foi possível sincronizar o catálogo local.',error));render()}catch(error){console.warn('Não foi possível restaurar a sessão RISE.',error)}}else render();
 </script></body></html>
