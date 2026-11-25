@@ -546,6 +546,7 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
   line-height:1.15;
   text-shadow:0 2px 18px #050d38;
 }
+.rise-about-portal h2:focus {outline:none;box-shadow:none}
 .rise-about-portal::backdrop {background:#050d38d9}
 .rise-about-portal-loader {
   display:block;
@@ -561,12 +562,16 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 }
 @keyframes risePortalSpin {to {transform:rotate(360deg)}}
 @keyframes risePortalOpen {
-  0% {transform:scale(1);opacity:.45}
-  100% {transform:scale(3);opacity:.85}
+  from {background-position:0 0,0 0,0 0;transform:scale(1);opacity:.65}
+  to {background-position:-90px 145px,120px 175px,-170px -105px;transform:scale(1.55);opacity:1}
 }
 @media(prefers-reduced-motion:reduce) {
-  .rise-about-portal::before,.rise-about-portal::after {animation:none;opacity:.35}
-  .rise-about-portal-loader {animation:none}
+  .rise-about-portal::before,.rise-about-portal::after {animation-name:risePortalGentleDrift}
+  .rise-about-portal-loader {animation-duration:2s}
+}
+@keyframes risePortalGentleDrift {
+  from {background-position:0 0,0 0,0 0}
+  to {background-position:-18px 24px,20px 32px,-28px -16px}
 }
 .rise-site-footer .rise-footer-shortcuts {
   justify-content:center;
