@@ -504,6 +504,19 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 @media(max-width:550px){.shop-header.retail-header>.mobile-product-trigger{top:-23px;height:24px;width:28px;min-width:28px!important}.retail-utility>span:first-child{padding-left:36px}.shop-header.retail-header .header-brand-group{justify-content:flex-start;justify-self:start}}
 
 /* Blend catalogue-category photos into their own pastel tile instead of a white rectangle. */
+.customer-product-menu .menu-collapse {
+  display:grid;
+  place-items:center;
+  padding:0;
+}
+.customer-product-menu .menu-collapse::after {
+  content:"";
+  width:14px;
+  height:14px;
+  background:
+    linear-gradient(45deg,transparent 45%,currentColor 45% 55%,transparent 55%),
+    linear-gradient(-45deg,transparent 45%,currentColor 45% 55%,transparent 55%);
+}
 .home-creativity-bottom > .carousel-controls {
   position:static;
   transform:none;
