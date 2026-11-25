@@ -2816,24 +2816,103 @@ async function loadSharedSalePrices() {
   sharedSalePrices = Object.fromEntries((data || []).map(item =>
     [item.setting_key.slice('sale_prices_'.length),item.value]));
 }
-async function publishProductPricing(product, userId) {
+async function prepareProductPricing(product) {
   const pricing = product.pricing;
   if (!pricing) return;
   const bucket = window.riseSupabase.storage.from('rise-admin-pricing');
-  const path = product.id + '.json';
+  const revision = crypto.randomUUID();
+  const path = product.id + '-' + revision + '.json';
   const {error:privateError} = await bucket.upload(path,
     new Blob([JSON.stringify(pricing)],{type:'application/json'}),{upsert:true});
   if (privateError) throw privateError;
-  const prices = {};
+  const prices = {_revision:revision};
   for (const row of [...(pricing.rows || [])].sort((a,b) => Number(a.origin === 'manual') - Number(b.origin === 'manual'))) {
     if (Number(row.costTotal) > 0) prices[salePriceKey(row)] =
       markupSale(row.costTotal,row.markup ?? pricing.markup ?? 3);
   }
-  const {error} = await window.riseSupabase.from('site_settings')
-    .upsert({setting_key:'sale_prices_'+product.id,value:prices},{onConflict:'setting_key'});
-  if (error) throw error;
-  sharedSalePrices[product.id] = prices;
+  return {setting_key:'sale_prices_'+product.id,value:prices};
 }
+async function publishPricingBatch(changedProducts) {
+  const rows = [];
+  for (const product of changedProducts) {
+    const row = await prepareProductPricing(product);
+    if (row) rows.push(row);
+  }
+  if (!rows.length) return;
+  const {error} = await window.riseSupabase.from('site_settings')
+    .upsert(rows,{onConflict:'setting_key'});
+  if (error) throw error;
+  for (const row of rows) sharedSalePrices[row.setting_key.slice('sale_prices_'.length)] = row.value;
+}
+async function publishProductPricing(product) {
+  await publishPricingBatch([product]);
+}
+async function refreshAdminPriceTable() {
+  priceTransferAdmin();
+  if (!window.riseSupabase) throw Error('Abra o site publicado para acessar a tabela compartilhada.');
+  await loadSharedSalePrices();
+  const bucket = window.riseSupabase.storage.from('rise-admin-pricing');
+  products = await Promise.all(products.map(async product => {
+    if (!sharedSalePrices[product.id]) return product;
+    const {data,error} = await bucket.download(privatePricingPath(product.id));
+    if (error) throw error;
+    const pricing = JSON.parse(await data.text());
+    return {...product,pricing,price:priceRowsMin(pricing.rows,pricing.markup??3)??product.price};
+  }));
+}
+function privatePricingPath(id) {
+  const revision = sharedSalePrices[id]?._revision;
+  return id + (revision ? '-' + revision : '') + '.json';
+}
+const exportLocalPriceTable = exportPriceTable;
+exportPriceTable = async function () {
+  try {
+    await refreshAdminPriceTable();
+    exportLocalPriceTable();
+  } catch (error) { toast('Não foi possível exportar: ' + error.message); }
+};
+const readLocalPriceImport = readPriceTableImport;
+readPriceTableImport = async function (input) {
+  if (!input.files?.[0]) return;
+  try {
+    await refreshAdminPriceTable();
+    if (input.isConnected) await readLocalPriceImport(input);
+  } catch (error) { toast('Não foi possível preparar a importação: ' + error.message); }
+};
+let cloudPriceImportBusy = false;
+applyPriceTableImport = async function () {
+  if (cloudPriceImportBusy) return;
+  cloudPriceImportBusy = true;
+  try {
+    const draft = priceImportDraft;
+    if (!draft?.updates.length) throw Error('Nenhuma atualização disponível.');
+    await refreshAdminPriceTable();
+    if (JSON.stringify(catalogMetadata()) !== draft.snapshot) {
+      throw Error('O catálogo mudou. Abra a importação novamente para revisar a planilha.');
+    }
+    const next = JSON.parse(JSON.stringify(products));
+    const changed = new Set();
+    for (const update of draft.updates) {
+      const product = next.find(item => item.id === update.id);
+      product.pricing.rows[update.index] = {
+        ...product.pricing.rows[update.index],costTotal:update.cost,markup:update.markup,origin:'manual'
+      };
+      changed.add(product);
+    }
+    for (const product of changed) {
+      product.price = priceRowsMin(product.pricing.rows,product.pricing.markup??3)??product.price;
+    }
+    toast('Publicando preços no Supabase…');
+    await publishPricingBatch([...changed]);
+    products = next;
+    persist();
+    priceImportDraft = null;
+    closeModal();
+    render();
+    toast(draft.updates.length + ' configuração(ões) publicadas.');
+  } catch (error) { toast('Importação não confirmada: ' + error.message); }
+  finally { cloudPriceImportBusy = false; }
+};
 const editProductBeforeCloudPricing = editProduct;
 editProduct = async function(id) {
   if (window.riseSupabase && adminSession && sharedSalePrices[id]) {
@@ -2841,7 +2920,7 @@ editProduct = async function(id) {
       const {data,error} = await window.riseSupabase.auth.getUser();
       if (error || !data?.user) throw error || new Error('Sessão indisponível.');
       const {data:file,error:downloadError} = await window.riseSupabase.storage
-        .from('rise-admin-pricing').download(id + '.json');
+        .from('rise-admin-pricing').download(privatePricingPath(id));
       if (downloadError) throw downloadError;
       const pricing = JSON.parse(await file.text());
       products = products.map(p => p.id === Number(id) ? {...p,pricing} : p);
@@ -2979,7 +3058,7 @@ saveProduct = async function (id, form) {
       if (error || !data?.user) {
         throw new Error('Entre novamente como administrador no site publicado.');
       }
-      await publishProductPricing(saved,data.user.id);
+      await publishProductPricing(saved);
       await window.riseSupabaseBridge.publishProductMedia(saved);
     });
     productMediaSaveQueue = sync.catch(() => {});
