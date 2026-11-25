@@ -645,7 +645,7 @@ section.kit-entry > .btn .icon {width:14px;height:14px}
     white-space:nowrap;
     flex:0 0 auto;
     text-align:center;
-    transform:translateX(clamp(4px,calc(3vw - 4px),10px));
+    transform:translateX(var(--about-offset,0px));
   }
   .shop-header.retail-header>.mobile-product-trigger {
     position:static!important;
@@ -3036,6 +3036,34 @@ kitSelected = function () {
   });
 };
 const saveProductBeforeMediaSync = saveProduct;
+let measuredMobileHeader;
+const mobileHeaderResize = new ResizeObserver(centerMobileAbout);
+function centerMobileAbout() {
+  if (!measuredMobileHeader || !matchMedia('(max-width:760px)').matches) return;
+  const about = measuredMobileHeader.querySelector('.about-beside-logo');
+  const logo = measuredMobileHeader.querySelector('.shop-logo');
+  const account = measuredMobileHeader.querySelector('.customer-account');
+  if (!about || !logo || !account) return;
+  const oldOffset = parseFloat(about.style.getPropertyValue('--about-offset')) || 0;
+  const box = about.getBoundingClientRect();
+  const target = (logo.getBoundingClientRect().right + account.getBoundingClientRect().left) / 2;
+  const offset = Math.round(target - (box.left + box.width / 2 - oldOffset));
+  about.style.setProperty('--about-offset',offset + 'px');
+}
+function observeMobileHeader() {
+  const header = document.querySelector('.shop-header.retail-header');
+  if (header === measuredMobileHeader) return;
+  mobileHeaderResize.disconnect();
+  measuredMobileHeader = header;
+  if (!header) return;
+  mobileHeaderResize.observe(header);
+  for (const control of header.querySelectorAll('.shop-logo,.about-beside-logo,.header-actions')) {
+    mobileHeaderResize.observe(control);
+  }
+  centerMobileAbout();
+}
+new MutationObserver(observeMobileHeader).observe(document.getElementById('app'),{childList:true});
+observeMobileHeader();
 const updatePriceBeforeProductSupport = updatePrice;
 const homeCarouselBeforeBelowControls = homeCarousel;
 homeCarousel = function (...args) {
