@@ -511,6 +511,25 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
   max-width:100%;
   margin:8px auto 0;
 }
+@media (max-width:760px) {
+  .retail-home .retail-promos .retail-promo {
+    height:auto;
+    min-height:175px;
+    grid-template-columns:minmax(0,38fr) minmax(0,62fr);
+    grid-template-rows:auto;
+  }
+  .retail-home .retail-promos .retail-promo .campaign-copy {
+    min-width:0;
+    padding:14px 12px 14px 4px;
+    overflow-wrap:anywhere;
+  }
+  .retail-home .retail-promos .retail-promo h2 {
+    font-size:clamp(16px,4.6vw,21px);
+  }
+  .retail-home .retail-promos .retail-promo p {
+    font-size:11px;
+  }
+}
 .home-creativity-bottom .carousel-arrow {
   display:grid;
   place-items:center;
