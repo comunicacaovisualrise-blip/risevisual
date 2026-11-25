@@ -833,7 +833,7 @@ section.kit-entry > .btn .icon {width:14px;height:14px}
 .signup-confirmation{margin:32px auto;padding:clamp(20px,5vw,40px);max-width:540px}.signup-confirmation p{margin:12px 0 20px;overflow-wrap:anywhere}.mobile-customer-greeting{display:none}@media(max-width:800px){.retail-header .header-actions{position:relative}.retail-header.has-customer-session .header-actions{padding-top:12px}.retail-header .mobile-customer-greeting{display:block;position:absolute;left:0;top:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:700;color:#07113b}}
 .payment-preview-options{display:flex;flex-wrap:wrap;gap:10px;border:1px solid #dce3f4;border-radius:12px;padding:14px;margin:16px 0}.payment-preview-options legend{font-weight:700;padding:0 6px}.payment-preview-options label{display:flex;align-items:center;gap:7px;margin:0;padding:9px 12px;border-radius:8px;background:#f1f4ff;cursor:pointer}.payment-preview-options p{flex-basis:100%;margin:0}
 .crm-quote-card[data-crm-quote]{cursor:grab;position:relative;user-select:none}.crm-quote-grip{display:inline-grid;place-items:center;width:36px;height:36px;touch-action:none;color:#183477;margin-right:6px;cursor:grab;font-size:21px}.crm-quote-dragging{opacity:.48}.crm-board [data-quote-stage].crm-quote-drop{outline:2px solid #063bea;outline-offset:-2px;background:#eaf0ff}.crm-quote-ghost{position:fixed;left:0;top:0;z-index:5000;pointer-events:none;background:#07133b;color:#fff;border-radius:8px;padding:10px 14px;box-shadow:0 4px 14px #07133b44}
-.pill.customer-quote-status{font-weight:700}.pill.customer-quote-status--won{background:#dcfce7;color:#14532d}.pill.customer-quote-status--negotiating{background:#dbeafe;color:#1e3a8a}.pill.customer-quote-status--sent{background:#fef3c7;color:#78350f}.pill.customer-quote-status--lost{background:#fee2e2;color:#991b1b}
+.pill.customer-quote-status{font-weight:700}.pill.customer-quote-status--won{background:#dcfce7;color:#14532d}.pill.customer-quote-status--negotiating{background:#dbeafe;color:#1e3a8a}.pill.customer-quote-status--sent{background:#fef3c7;color:#78350f}.pill.customer-quote-status--lost{background:#fee2e2;color:#991b1b}.pill.customer-quote-status--refunded{background:#ede9fe;color:#5b21b6}.crm-quote-card.crm-quote-refunded{background:#f5f0ff;border-color:#a78bfa}.quote-refund-details{padding:14px;margin:12px 0;background:#f5f0ff;border-radius:8px;overflow-wrap:anywhere}
 </style></head><body><div id="app"></div><div id="overlay"></div><div id="toast" role="status"></div><script>const $=s=>document.querySelector(s),money=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),esc=s=>String(s??'').replace(/\bGIV(?: Online)?\b/g,'fornecedor').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const paths={grid:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',bag:'M5 7h14l1 14H4L5 7z M8 8V6a4 4 0 0 1 8 0v2',users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M15 3a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',box:'m3 7 9-4 9 4v10l-9 4-9-4V7z m0 0 9 4 9-4 M12 11v10 M7 5l10 4',chart:'M4 20h17 M7 16V9 M12 16V4 M17 16v-5',file:'M14 2H5v20h14V7l-5-5z M14 2v6h6 M8 12h8 M8 16h6',truck:'M1 4h13v13H1z M14 9h4l4 4v4h-8 M8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0',settings:'M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M5 19l2-2 M17 7l2-2',search:'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',bell:'M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3z M10 20h4',arrow:'M5 12h14 M14 7l5 5-5 5',plus:'M12 5v14 M5 12h14',wallet:'M3 5h17v15H3z M3 8h17 M15 12h7v5h-7z',check:'m5 12 4 4L20 5',clock:'M12 7v5l3 2 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',store:'M3 9h18l-2-6H5L3 9z M4 10v11h16V10 M9 21v-7h6v7',download:'M12 3v12 m-5-5 5 5 5-5 M4 17v4h16v-4',chevron:'m9 5 7 7-7 7',link:'M14 3h7v7 M21 3 10 14 M10 4H3v17h17v-7',mail:'M3 5h18v14H3z m0 0 9 8 9-8'};
 function icon(n){return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n]||paths.box}"/></svg>`}function logo(){return '<span class="rise-logo-frame"><img class="brand-image" src="assets/embedded/embedded-387a0c98344f77ab.png" alt="RISE — Comunicação Visual" width="1254" height="1254"></span>'}
@@ -2770,7 +2770,7 @@ orderArtworkMarkup=function(o){return orderArtworkBeforeColors(o)+(adminSession|
 
 const customerReceiptUploads=new Set();
 function canReadCustomerReceipt(o){return !!o&&(adminSession||!!currentCustomer()&&currentCustomer().id===o.customerId)}
-function customerReceiptButtons(o){if(!currentCustomer()||currentCustomer().id!==o.customerId)return '';return '<span class="customer-receipt-actions">'+(o.payment?.confirmedAt?'<span class="pill review-accepted" title="Pagamento concluído e comprovante conferido">Pago</span>':'<label class="btn">'+(o.customerPaymentReceipt?'Trocar comprovante':'Anexar comprovante')+'<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" data-order="'+esc(o.id)+'" onchange="uploadCustomerPaymentReceipt(this)" hidden></label>')+(o.customerPaymentReceipt?'<button type="button" class="btn" data-order="'+esc(o.id)+'" onclick="viewCustomerPaymentReceipt(this.dataset.order)">Ver comprovante</button>':'')+(o.customerPaymentReceipt&&!o.payment?.confirmedAt?'<small>Comprovante enviado · aguardando conferência</small>':'')+'</span>'}
+function customerReceiptButtons(o){if(!currentCustomer()||currentCustomer().id!==o.customerId)return '';return '<span class="customer-receipt-actions">'+(o.paymentStatus==='refunded'?'<span class="pill customer-quote-status customer-quote-status--refunded">Estornado</span>':o.payment?.confirmedAt?'<span class="pill review-accepted" title="Pagamento concluído e comprovante conferido">Pago</span>':'<label class="btn">'+(o.customerPaymentReceipt?'Trocar comprovante':'Anexar comprovante')+'<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" data-order="'+esc(o.id)+'" onchange="uploadCustomerPaymentReceipt(this)" hidden></label>')+(o.customerPaymentReceipt?'<button type="button" class="btn" data-order="'+esc(o.id)+'" onclick="viewCustomerPaymentReceipt(this.dataset.order)">Ver comprovante</button>':'')+(o.customerPaymentReceipt&&!o.payment?.confirmedAt?'<small>Comprovante enviado · aguardando conferência</small>':'')+'</span>'}
 async function uploadCustomerPaymentReceipt(input){const id=String(input.dataset.order),o=state.orders.find(o=>String(o.id)===id),file=input.files?.[0],customer=currentCustomer();if(!o||!customer||o.customerId!==customer.id||o.payment?.confirmedAt||!file||customerReceiptUploads.has(id))return;if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(file.type)||file.size>10*1024*1024){input.value='';return toast('Use JPG, PNG, WebP ou PDF de até 10 MB.')}customerReceiptUploads.add(id);input.disabled=true;try{const key='customer-payment-'+id+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),record={data:await readDataFile(file),name:file.name,type:file.type};await artworkStore(key,record);artworkFilesCache.set(key,record);commitFinalArtOrder(id,next=>{if(!currentCustomer()||next.customerId!==currentCustomer().id||next.payment?.confirmedAt)throw Error('Este pedido não pode receber alterações neste acesso.');if(next.customerPaymentReceipt)next.customerPaymentReceiptHistory=[...(next.customerPaymentReceiptHistory||[]),next.customerPaymentReceipt];next.customerPaymentReceipt={key,name:file.name,type:file.type,size:file.size,submittedAt:new Date().toISOString(),submittedBy:customer.id,reviewStatus:'pending'}});render();toast('Comprovante enviado. A RISE fará a conferência do pagamento.')}catch(e){toast('Não foi possível salvar o comprovante. '+e.message)}finally{customerReceiptUploads.delete(id);input.disabled=false;input.value=''}}
 async function viewCustomerPaymentReceipt(id,adminReview=false){const o=state.orders.find(o=>String(o.id)===String(id));if(!canReadCustomerReceipt(o)||!o.customerPaymentReceipt)return;const receipt=o.customerPaymentReceipt;try{const r=await artworkRead(receipt.key);if(!canReadCustomerReceipt(state.orders.find(o=>String(o.id)===String(id))))return;if(!r?.data)throw Error('Arquivo não encontrado neste navegador.');const preview=r.type==='application/pdf'?'<p>Comprovante em PDF. Abra ou baixe o arquivo para conferir.</p>':'<img class="payment-receipt-preview" src="'+esc(r.data)+'" alt="Comprovante enviado pelo cliente">';modal('Comprovante do pedido #'+esc(id),preview+'<p>'+esc(receipt.name)+'</p><a class="btn" href="'+esc(r.data)+'" download="'+esc(receipt.name)+'">Baixar comprovante</a>'+(adminSession&&adminReview&&!o.payment?.confirmedAt?'<div class="grid2"><label>Forma de pagamento<select id="receiptReviewMethod"><option value="pix">Pix</option><option value="credit">Cartão de crédito</option></select></label><label>Parcelas (cartão)<input id="receiptReviewInstallments" type="number" min="1" max="24" value="1"></label></div><label class="kit-check"><input type="checkbox" id="receiptReviewConfirmed"> Conferi o comprovante e confirmei o recebimento do pagamento.</label>':''),adminSession&&adminReview&&!o.payment?.confirmedAt?'<button class="btn primary" data-order="'+esc(id)+'" data-receipt="'+esc(receipt.key)+'" onclick="confirmCustomerReceiptPayment(this.dataset.order,this.dataset.receipt)">Confirmar pagamento concluído</button>':'',true)}catch(e){toast('Não foi possível abrir o comprovante. '+e.message)}}
 function confirmCustomerReceiptPayment(id,key){if(!adminSession)return;const method=$('#receiptReviewMethod')?.value,installments=method==='credit'?Number($('#receiptReviewInstallments')?.value):1;if(!$('#receiptReviewConfirmed')?.checked)return toast('Confirme a conferência do comprovante e o recebimento.');if(!['pix','credit','payment_link'].includes(method)||!Number.isInteger(installments)||installments<1||installments>24)return toast('Confira a forma de pagamento e as parcelas.');try{commitFinalArtOrder(id,next=>{if(!adminSession||next.customerPaymentReceipt?.key!==key)throw Error('O comprovante mudou. Confira o arquivo mais recente.');if(next.payment?.confirmedAt)throw Error('Pagamento já confirmado.');const at=new Date().toISOString();next.payment={method,installments,receipt:{...next.customerPaymentReceipt},confirmedAt:at,confirmedBy:adminLoginConfig.email,status:'Pagamento concluído'};next.customerPaymentReceipt={...next.customerPaymentReceipt,reviewStatus:'confirmed',reviewedAt:at};next.reviewDecision='Aceito';next.reviewedAt=at;next.reviewedBy=adminLoginConfig.email;next.acceptedAt=next.acceptedAt||at;next.everAccepted=true;next.adminHandledAt=at;next.reviewHistory=[...(next.reviewHistory||[]),{decision:'Aceito',reason:'Pagamento conferido e concluído',at,by:adminLoginConfig.email}];if(next.status==='Pagamento pendente')next.status='Arte pendente'});closeModal();render();toast('Pagamento concluído. O pedido seguirá para a etapa de arte.')}catch(e){toast(e.message)}}
@@ -2778,7 +2778,7 @@ const accountBeforePaymentReceipts=accountPage;
 accountPage=function(){return accountBeforePaymentReceipts().replace(/(<button class="btn" onclick="customerOrderDetail\('([^']+)'\)">)/g,(all,button,id)=>{const o=state.orders.find(o=>String(o.id)===id);return (o?customerReceiptButtons(o):'')+button})};
 const paymentMarkupBeforeCustomerReceipt=orderPaymentMarkup;
 orderPaymentMarkup=function(o){return paymentMarkupBeforeCustomerReceipt(o)+(o.customerPaymentReceipt?'<section class="order-review-fields"><h3>Comprovante enviado pelo cliente</h3><p>'+esc(o.customerPaymentReceipt.name)+'</p><button type="button" class="btn" data-order="'+esc(o.id)+'" onclick="viewCustomerPaymentReceipt(this.dataset.order,true)">'+(o.payment?.confirmedAt?'Ver comprovante confirmado':'Conferir e confirmar pagamento')+'</button></section>':'')};
-function orderReceiptTableCell(o){if(!adminSession)return '';return '<td class="order-payment-cell">'+(o.payment?.confirmedAt?'<span class="pill review-accepted" title="Pagamento concluído e comprovante conferido">Pago</span>':'<span class="pill amber">Pagamento pendente</span>')+(o.customerPaymentReceipt?'<button class="link" data-order="'+esc(o.id)+'" onclick="viewCustomerPaymentReceipt(this.dataset.order,true)">'+icon('file')+' Conferir comprovante</button>':o.payment?.receipt?'<span class="hint">Comprovante anexado pelo administrador</span>':'<span class="hint">Sem comprovante</span>')+'</td>'}
+function orderReceiptTableCell(o){if(!adminSession)return '';return '<td class="order-payment-cell">'+(o.paymentStatus==='refunded'?'<span class="pill customer-quote-status customer-quote-status--refunded">Estornado</span>':o.payment?.confirmedAt?'<span class="pill review-accepted" title="Pagamento concluído e comprovante conferido">Pago</span>':'<span class="pill amber">Pagamento pendente</span>')+(o.customerPaymentReceipt?'<button class="link" data-order="'+esc(o.id)+'" onclick="viewCustomerPaymentReceipt(this.dataset.order,true)">'+icon('file')+' Conferir comprovante</button>':o.payment?.receipt?'<span class="hint">Comprovante anexado pelo administrador</span>':'<span class="hint">Sem comprovante</span>')+'</td>'}
 
 /* All actionable inbound activity reaches the administrator bell with stable keys. */
 const notificationsBeforeInboundAudit=adminNotificationItems;
@@ -3884,7 +3884,7 @@ function loadRemoteCrmQuotes(){
     const quotes={data:data||[]};
   remoteKitQuotes = quotes.data.map(row => ({...row.payload,id:row.id,customerId:row.customer_id,
     number:row.quote_number,commercialStage:row.filtered_at?'lost':row.commercial_stage,createdAt:row.created_at,readAt:row.read_at,outcomeAt:row.filtered_at,status:row.filtered_at?'filtered':'new',
-    orderId:row.orders?.order_number,importedBy:row.imported_by,legacyId:row.legacy_id,remote:true}));
+    orderId:row.orders?.order_number,refund:row.refund_record,importedBy:row.imported_by,legacyId:row.legacy_id,remote:true}));
   })().finally(()=>{crmQuoteLoadInFlight=null});
   return crmQuoteLoadInFlight;
 }
@@ -4299,15 +4299,15 @@ window.importRiseLegacyCommercial=async function() {
   } catch (error) { toast('Não foi possível importar os registros: '+error.message); }
   finally { legacyCommercialImportRunning=false; }
 };
-const quoteStageLabels={sent:'Orçamento enviado',negotiating:'Em negociação',won:'Venda concluída',lost:'Venda não fechada'};
+const quoteStageLabels={sent:'Orçamento enviado',negotiating:'Em negociação',won:'Venda concluída',lost:'Venda não fechada',refunded:'Estornado'};
 const quoteColumnStages=[null,'sent','negotiating','won','lost'];
-function quoteStage(quote){return quote.orderId?'won':quote.commercialStage||'sent'}
+function quoteStage(quote){return quote.refund?'refunded':quote.orderId?'won':quote.commercialStage||'sent'}
 window.quoteCardsForCrmColumn=function(index){
-  return adminSession?remoteKitQuotes.filter(quote=>quoteStage(quote)===quoteColumnStages[index]):[];
+  return adminSession?remoteKitQuotes.filter(quote=>(quoteStage(quote)==='refunded'?'lost':quoteStage(quote))===quoteColumnStages[index]):[];
 };
 window.crmQuoteCardMarkup=function(quote){
   const stage=quoteStage(quote);
-  return '<article class="deal crm-quote-card"'+(stage==='won'?'':' data-crm-quote="'+esc(quote.id)+'" data-current-stage="'+stage+'" onpointerdown="beginCrmQuoteDrag(event,this)"')+'>'+(stage==='won'?'':'<span class="crm-quote-grip" title="Arrastar para mudar de coluna" aria-hidden="true">⠿</span>')+'<span class="pill gray">'+quoteStageLabels[stage]+'</span>'+
+  return '<article class="deal crm-quote-card '+(stage==='refunded'?'crm-quote-refunded':'')+'"'+(quote.orderId?'':' data-crm-quote="'+esc(quote.id)+'" data-current-stage="'+stage+'" onpointerdown="beginCrmQuoteDrag(event,this)"')+'>'+(quote.orderId?'':'<span class="crm-quote-grip" title="Arrastar para mudar de coluna" aria-hidden="true">⠿</span>')+'<span class="pill gray">'+quoteStageLabels[stage]+'</span>'+
     '<h4>Orçamento #'+esc(quote.number)+'</h4><p>'+esc(quote.contact?.name||'Cliente')+'</p>'+
     '<div class="price">'+money(quote.total)+'</div><button type="button" class="link" data-quote="'+esc(quote.id)+
     '" onclick="openCrmKitQuote(this.dataset.quote)">Ver orçamento →</button></article>';
@@ -4320,6 +4320,72 @@ function quoteItemsMarkup(quote){
     '<div class="detail-row"><span>Frete</span><strong>'+money(quote.freight||0)+'</strong></div>'+
     '<div class="detail-row"><strong>Total do orçamento</strong><strong>'+money(quote.total)+'</strong></div>';
 }
+function quoteRefundMarkup(quote){
+  const refund=quote.refund;
+  if(!refund)return '';
+  return '<section class="quote-refund-details"><h3>Pagamento estornado</h3><p>'+esc(refund.reason)+'</p><p class="hint">'+
+    esc(noticeDate(refund.at))+' · '+money(refund.amount)+'</p>'+
+    '<button type="button" class="btn" data-quote="'+esc(quote.id)+'" onclick="downloadCrmQuoteRefund(this.dataset.quote)">Baixar comprovante do estorno</button></section>';
+}
+window.downloadCrmQuoteRefund=async function(id){
+  const quote=adminSession?remoteKitQuotes.find(q=>q.id===id):
+    currentCustomer()?.id===customerQuotesOwner?customerQuotes.find(q=>q.id===id):null;
+  const receipt=quote?.refund?.receipt;
+  if(!receipt?.path)return;
+  try{
+    const {data,error}=await window.riseSupabase.storage.from('rise-order-files').download(receipt.path);
+    if(error)throw error;
+    const url=URL.createObjectURL(data),link=document.createElement('a');
+    link.href=url;link.download=receipt.name||'comprovante-estorno';link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  }catch(error){toast('Não foi possível abrir o comprovante: '+error.message)}
+};
+window.openCrmQuoteRefund=function(id){
+  const quote=remoteKitQuotes.find(q=>q.id===id);
+  const order=state.orders.find(o=>String(o.id)===String(quote?.orderId));
+  if(!adminSession||!quote||quoteStage(quote)!=='won')return;
+  if(order?.paymentStatus!=='paid')return toast('Registre o pagamento antes de registrar o estorno.');
+  modal('Registrar estorno · Orçamento #'+esc(quote.number),
+    '<form id="quoteRefundForm" data-quote="'+esc(id)+'" onsubmit="event.preventDefault();registerCrmQuoteRefund(this)">'+
+    '<p>Use esta opção depois de devolver o pagamento ao cliente.</p>'+
+    '<div class="detail-row"><strong>Valor do estorno</strong><strong>'+money(order.total)+'</strong></div>'+
+    '<label>Motivo<textarea name="reason" required minlength="3" maxlength="1000"></textarea></label>'+
+    '<label>Comprovante<input type="file" name="receipt" accept="image/jpeg,image/png,image/webp,application/pdf" required></label>'+
+    '<p class="hint">O motivo e o comprovante ficarão disponíveis ao cliente.</p>'+
+    '<label class="kit-check"><input type="checkbox" name="confirmed" required> Confirmo que devolvi o valor indicado.</label></form>',
+    '<button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openCrmKitQuote(this.dataset.quote)">Voltar</button> '+
+    '<button type="submit" form="quoteRefundForm" class="btn primary">Registrar estorno</button>',true);
+};
+const stagedRefundReceipts=new WeakMap();
+window.registerCrmQuoteRefund=async function(form){
+  const id=form.dataset.quote;
+  if(!adminSession||kitConversionsBusy.has(id)||!form.reportValidity())return;
+  const file=form.elements.namedItem('receipt').files?.[0];
+  const reason=form.elements.namedItem('reason').value.trim();
+  const extension={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','application/pdf':'pdf'}[file?.type];
+  if(!extension||!file.size||file.size>10485760)return toast('Use JPG, PNG, WebP ou PDF de até 10 MB.');
+  const submit=document.querySelector('[form="quoteRefundForm"][type="submit"]');
+  kitConversionsBusy.add(id);if(submit)submit.disabled=true;
+  try{
+    const client=window.riseSupabase;
+    const {data,error}=await client.auth.getUser();
+    if(error||!data?.user)throw error||Error('Sessão indisponível.');
+    let staged=stagedRefundReceipts.get(form);
+    if(!staged||staged.file!==file){
+      const path=[data.user.id,'quote-refunds',id,crypto.randomUUID()+'.'+extension].join('/');
+      const upload=await client.storage.from('rise-order-files').upload(path,file,{contentType:file.type});
+      if(upload.error)throw upload.error;
+      staged={file,path};stagedRefundReceipts.set(form,staged);
+    }
+    const saved=await client.rpc('rise_record_quote_refund',{
+      target_id:id,refund_reason:reason,receipt_path:staged.path,receipt_name:file.name
+    });
+    if(saved.error)throw saved.error;
+    await window.riseSupabaseBridge.loadRemoteOrders();
+    closeModal();go('crm');toast('Estorno registrado. Comprovante disponível ao cliente.');
+  }catch(error){toast('Não foi possível registrar o estorno: '+error.message)}
+  finally{kitConversionsBusy.delete(id);if(submit)submit.disabled=false}
+};
 window.openCrmKitQuote=function(id){
   const quote=remoteKitQuotes.find(item=>item.id===id);
   if(!adminSession||!quote)return;
@@ -4330,17 +4396,18 @@ window.openCrmKitQuote=function(id){
     esc(quote.contact?.email||'')+'</p><p>'+esc(phone)+'</p>'+
     (digitsOnly.length>=10?'<p><a class="btn" href="tel:+'+number+'">Ligar</a> <a class="btn" href="https://wa.me/'+number+'" target="_blank" rel="noopener noreferrer">WhatsApp</a></p>':'');
   let footer=quote.imagePath?'<button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openKitRequestImage(this.dataset.quote)">Ver imagem do orçamento</button> ':'';
-  footer+=stage==='won'?
+  footer+=quote.orderId?
     '<button type="button" class="btn primary" data-order="'+esc(quote.orderId)+'" onclick="orderDetail(this.dataset.order)">Ver pedido #'+esc(quote.orderId)+'</button>':
     '<button type="submit" class="btn primary" form="crmQuoteStageForm">Salvar status</button>';
   const order=state.orders.find(item=>String(item.id)===String(quote.orderId));
   const paid=order?.paymentStatus==='paid'||!!order?.payment?.confirmedAt;
-  if(!paid&&stage!=='lost'&&(!order||!['Cancelado','Concluído'].includes(order.status)))footer+=' <button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openCrmQuoteManualPayment(this.dataset.quote)">Registrar pagamento</button>';
-  if(stage!=='won')footer+=' <button type="button" class="btn danger" data-quote="'+esc(id)+'" onclick="confirmCrmQuoteDeletion(this.dataset.quote)">Excluir orçamento</button>';
-  modal('Orçamento #'+esc(quote.number),'<span class="pill blue">'+quoteStageLabels[stage]+'</span>'+(paid?' <span class="pill review-accepted">Pago</span>':'')+'<p class="hint">'+
+  if(!paid&&stage!=='lost'&&stage!=='refunded'&&(!order||!['Cancelado','Concluído'].includes(order.status)))footer+=' <button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openCrmQuoteManualPayment(this.dataset.quote)">Registrar pagamento</button>';
+  if(!quote.orderId)footer+=' <button type="button" class="btn danger" data-quote="'+esc(id)+'" onclick="confirmCrmQuoteDeletion(this.dataset.quote)">Excluir orçamento</button>';
+  if(stage==='won'&&paid)footer+=' <button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openCrmQuoteRefund(this.dataset.quote)">Registrar estorno</button>';
+  modal('Orçamento #'+esc(quote.number),customerQuoteStatusBadge(stage)+'</span>'+(paid&&stage!=='refunded'?' <span class="pill review-accepted">Pago</span>':'')+'<p class="hint">'+
     esc(noticeDate(quote.createdAt))+'</p>'+contact+quoteItemsMarkup(quote)+
     (quote.comment?'<p><strong>Sobre a arte</strong><br>'+esc(quote.comment)+'</p>':'')+
-    (stage==='won'?'':'<form id="crmQuoteStageForm" data-quote="'+esc(id)+'" onsubmit="event.preventDefault();saveCrmQuoteStage(this)">'+
+    quoteRefundMarkup(quote)+(quote.orderId?'':'<form id="crmQuoteStageForm" data-quote="'+esc(id)+'" onsubmit="event.preventDefault();saveCrmQuoteStage(this)">'+
       '<label>Status comercial<select name="stage">'+['sent','negotiating','won','lost'].map(value=>
       '<option value="'+value+'" '+(stage===value?'selected':'')+'>'+quoteStageLabels[value]+'</option>').join('')+
       '</select></label></form>'),footer,true);
@@ -4549,7 +4616,7 @@ window.openCustomerQuote=function(id){
   if(currentCustomer()?.id!==customerQuotesOwner)return;
   const quote=customerQuotes.find(item=>item.id===id);
   if(!quote)return;
-  modal('Orçamento #'+esc(quote.number),customerQuoteStatusBadge(quote.stage)+quoteItemsMarkup(quote),
+  modal('Orçamento #'+esc(quote.number),customerQuoteStatusBadge(quote.stage)+quoteItemsMarkup(quote)+quoteRefundMarkup(quote),
     quote.orderNumber?'<button class="btn primary" data-order="'+esc(quote.orderNumber)+
       '" onclick="accountTab=\'orders\';go(\'account\');customerOrderDetail(this.dataset.order)">Acompanhar pedido #'+esc(quote.orderNumber)+'</button>':quotePaymentButton(quote),true);
 };
@@ -4561,7 +4628,17 @@ window.openCustomerOrderPaymentPreview=function(id){
     '</strong></div>'+paymentPreviewOptions(),'<button class="btn" data-order="'+esc(id)+
     '" onclick="customerOrderDetail(this.dataset.order)">Voltar ao pedido</button>');
 };
+window.openCustomerOrderRefund=async function(id){
+  const order=ownedRepeatOrder(id);
+  if(!order||order.paymentStatus!=='refunded')return;
+  await window.showCustomerQuotes();
+  const quote=customerQuotes.find(item=>String(item.orderNumber)===String(id)&&item.refund);
+  if(quote)window.openCustomerQuote(quote.id);
+  else toast('Comprovante de estorno indisponível.');
+};
 window.orderPaymentPreviewButton=function(order){
+  if(order.paymentStatus==='refunded'&&order.customerId===currentCustomer()?.id)
+    return '<button type="button" class="btn" data-order="'+esc(order.id)+'" onclick="openCustomerOrderRefund(this.dataset.order)">Ver estorno</button>';
   return order.remoteId&&['pending','proof_sent','rejected'].includes(order.paymentStatus)&&
     !order.payment?.confirmedAt&&!['Cancelado','Concluído'].includes(order.status)&&order.reviewDecision!=='Não aceito'
       ?'<button type="button" class="btn primary" data-order="'+esc(order.id)+
@@ -4649,7 +4726,7 @@ window.crmQuoteTotalsForOverview=function(){
   const linked=new Set(state.deals.filter(d=>Number(d.stage)===3&&d.orderId).map(d=>String(d.orderId)));
   return {openCount:open.length,openValue:open.reduce((n,q)=>n+(Number(q.total)||0),0),
     wonCount:remoteKitQuotes.filter(q=>quoteStage(q)==='won'&&!linked.has(String(q.orderId))).length,
-    lostCount:remoteKitQuotes.filter(q=>quoteStage(q)==='lost').length};
+    lostCount:remoteKitQuotes.filter(q=>['lost','refunded'].includes(quoteStage(q))).length};
 };
 const sharedPricesRequest = loadSharedSalePrices().catch(error => console.warn('Preços compartilhados indisponíveis.', error));
 const sharedCatalogOrderRequest = loadPublishedCatalogOrder().catch(error => console.warn("Ordem compartilhada indisponível.",error));
