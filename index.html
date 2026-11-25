@@ -2640,7 +2640,15 @@ document.head.appendChild(paymentMethodsStyle);
 const riseBrandMediaDefaults={siteLogo:'assets/embedded/embedded-387a0c98344f77ab.png',paymentMethods:'assets/formas-pagamento-4k.png'};
 let riseBrandMediaDraft={};
 function riseBrandMedia(){return state.settings?.brandMedia||{}}
-function riseBrandMediaSrc(key){const media=riseBrandMedia();if(key==='siteLogo')return media.siteLogo?.data||media.headerLogo?.data||media.footerLogo?.data||riseBrandMediaDefaults.siteLogo;return media[key]?.data||riseBrandMediaDefaults[key]}
+function riseBrandMediaSrc(key){
+  const media=riseBrandMedia();
+  if(key==='siteLogo')return media.siteLogo?.data||media.headerLogo?.data||media.footerLogo?.data||riseBrandMediaDefaults.siteLogo;
+  const saved=media[key]?.data;
+  if(key==='paymentMethods' && (!saved || saved.endsWith('/brand/paymentMethods/1795549996803-1-formas-pagamento-4k.jpg'))) {
+    return 'bandeiras-transparente-4k.png';
+  }
+  return saved||riseBrandMediaDefaults[key];
+}
 function riseBrandMediaLabel(key){return({siteLogo:'Logo única do sistema',paymentMethods:'Cartões e meios de pagamento'})[key]||key}
 function riseBrandMediaDraftSrc(key){return riseBrandMediaDraft[key]?.data||riseBrandMediaSrc(key)}
 function riseBrandMediaPreview(key){const media=riseBrandMediaDraft[key];return '<article class="rise-brand-media-card"><div class="rise-brand-media-preview"><img src="'+esc(riseBrandMediaDraftSrc(key))+'" alt="Prévia de '+esc(riseBrandMediaLabel(key))+'"></div><strong>'+esc(riseBrandMediaLabel(key))+'</strong><small>'+(media?.name?esc(media.name):'Arte atual do site')+'</small><label class="btn rise-brand-media-upload">Substituir<input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadRiseBrandMedia(\''+key+'\',this)"></label>'+(media?'<button type="button" class="link" onclick="restoreRiseBrandMedia(\''+key+'\')">Usar arte padrão</button>':'')+'</article>'}
