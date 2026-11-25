@@ -2703,8 +2703,8 @@ async function loadSharedSalePrices() {
 async function publishProductPricing(product, userId) {
   const pricing = product.pricing;
   if (!pricing) return;
-  const bucket = window.riseSupabase.storage.from('rise-order-files');
-  const path = userId + '/admin-pricing/' + product.id + '.json';
+  const bucket = window.riseSupabase.storage.from('rise-admin-pricing');
+  const path = product.id + '.json';
   const {error:privateError} = await bucket.upload(path,
     new Blob([JSON.stringify(pricing)],{type:'application/json'}),{upsert:true});
   if (privateError) throw privateError;
@@ -2725,7 +2725,7 @@ editProduct = async function(id) {
       const {data,error} = await window.riseSupabase.auth.getUser();
       if (error || !data?.user) throw error || new Error('Sessão indisponível.');
       const {data:file,error:downloadError} = await window.riseSupabase.storage
-        .from('rise-order-files').download(data.user.id + '/admin-pricing/' + id + '.json');
+        .from('rise-admin-pricing').download(id + '.json');
       if (downloadError) throw downloadError;
       const pricing = JSON.parse(await file.text());
       products = products.map(p => p.id === Number(id) ? {...p,pricing} : p);
