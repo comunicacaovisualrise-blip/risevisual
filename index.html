@@ -3874,7 +3874,7 @@ function loadRemoteCrmQuotes(){
   if(!adminSession||!window.riseSupabase)return Promise.resolve();
   if(crmQuoteLoadInFlight)return crmQuoteLoadInFlight;
   crmQuoteLoadInFlight=(async()=>{
-    const {data,error}=await window.riseSupabase.from('rise_kit_quotes').select('*,orders(order_number)').order('created_at',{ascending:false});
+    const {data,error}=await window.riseSupabase.from('rise_kit_quotes').select('*,orders(order_number)').is('deleted_at',null).order('created_at',{ascending:false});
     if(error)throw error;
     if(!adminSession)return;
     const quotes={data:data||[]};
@@ -4332,6 +4332,7 @@ window.openCrmKitQuote=function(id){
   const order=state.orders.find(item=>String(item.id)===String(quote.orderId));
   const paid=order?.paymentStatus==='paid'||!!order?.payment?.confirmedAt;
   if(!paid&&stage!=='lost'&&(!order||!['Cancelado','Concluído'].includes(order.status)))footer+=' <button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openCrmQuoteManualPayment(this.dataset.quote)">Registrar pagamento</button>';
+  if(stage!=='won')footer+=' <button type="button" class="btn danger" data-quote="'+esc(id)+'" onclick="confirmCrmQuoteDeletion(this.dataset.quote)">Excluir orçamento</button>';
   modal('Orçamento #'+esc(quote.number),'<span class="pill blue">'+quoteStageLabels[stage]+'</span>'+(paid?' <span class="pill review-accepted">Pago</span>':'')+'<p class="hint">'+
     esc(noticeDate(quote.createdAt))+'</p>'+contact+quoteItemsMarkup(quote)+
     (quote.comment?'<p><strong>Sobre a arte</strong><br>'+esc(quote.comment)+'</p>':'')+
@@ -4339,6 +4340,29 @@ window.openCrmKitQuote=function(id){
       '<label>Status comercial<select name="stage">'+['sent','negotiating','won','lost'].map(value=>
       '<option value="'+value+'" '+(stage===value?'selected':'')+'>'+quoteStageLabels[value]+'</option>').join('')+
       '</select></label></form>'),footer,true);
+};
+window.confirmCrmQuoteDeletion=function(id){
+  const quote=remoteKitQuotes.find(item=>item.id===id);
+  if(!adminSession||!quote||quote.orderId)return;
+  modal('Excluir orçamento #'+esc(quote.number),
+    '<p>Este orçamento sairá do CRM e de Meus orçamentos na conta do cliente.</p>',
+    '<button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openCrmKitQuote(this.dataset.quote)">Cancelar</button> '+
+    '<button type="button" class="btn danger" data-quote="'+esc(id)+'" onclick="deleteCrmQuote(this)">Excluir orçamento</button>');
+};
+window.deleteCrmQuote=async function(button){
+  const id=button.dataset.quote;
+  const quote=remoteKitQuotes.find(item=>item.id===id);
+  if(!adminSession||!quote||quote.orderId||kitConversionsBusy.has(id))return;
+  kitConversionsBusy.add(id);
+  button.disabled=true;
+  try{
+    const {error}=await window.riseSupabase.rpc('rise_delete_quote',{target_id:id});
+    if(error)throw error;
+    remoteKitQuotes=remoteKitQuotes.filter(item=>item.id!==id);
+    if(customerQuotesOwner===quote.customerId)customerQuotes=customerQuotes.filter(item=>item.id!==id);
+    closeModal();go('crm');toast('Orçamento excluído.');
+  }catch(error){toast('Não foi possível excluir o orçamento: '+error.message)}
+  finally{kitConversionsBusy.delete(id);button.disabled=false}
 };
 window.openCrmQuoteManualPayment=function(id){
   const quote=remoteKitQuotes.find(row=>row.id===id);
