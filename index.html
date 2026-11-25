@@ -3168,6 +3168,34 @@ kitSelected = function () {
 const saveProductBeforeMediaSync = saveProduct;
 const goBeforeAboutPortal = go;
 let activeAboutPortal;
+let preparedAboutVideo;
+function prepareAboutVideo() {
+  const mobile = matchMedia('(max-width:760px), (pointer:coarse) and (orientation:portrait)').matches;
+  const source = mobile ? 'sobre-nos-mobile.mp4' : 'sobre-nos-desktop.mp4';
+  if (preparedAboutVideo?.getAttribute('src') === source) return preparedAboutVideo;
+  const video = document.createElement('video');
+  video.preload = 'metadata';
+  video.src = source;
+  video.classList.toggle('is-portrait',mobile);
+  video.playsInline = true;
+  video.controls = false;
+  video.disablePictureInPicture = true;
+  video.disableRemotePlayback = true;
+  video.defaultPlaybackRate = 1.5;
+  video.playbackRate = 1.5;
+  preparedAboutVideo = video;
+  return video;
+}
+function warmAboutAfterLoad() {
+  if (navigator.connection?.saveData || /2g/.test(navigator.connection?.effectiveType || '')) return;
+  const warm = () => {
+    if (!activeAboutPortal && state.view !== 'about') prepareAboutVideo().preload = 'auto';
+  };
+  if (window.requestIdleCallback) requestIdleCallback(warm,{timeout:2500});
+  else setTimeout(warm,900);
+}
+if (document.readyState === 'complete') warmAboutAfterLoad();
+else window.addEventListener('load',warmAboutAfterLoad,{once:true});
 go = function (view, ...args) {
   if (view !== 'about' || state.view === 'about' ||
       typeof HTMLDialogElement === 'undefined') {
@@ -3177,14 +3205,8 @@ go = function (view, ...args) {
   const portal = document.createElement('dialog');
   portal.className = 'rise-about-portal rise-about-video';
   portal.setAttribute('aria-label','Abertura de Sobre nós');
-  const video = document.createElement('video');
-  const mobile = matchMedia('(max-width:760px), (pointer:coarse) and (orientation:portrait)').matches;
-  video.src = mobile ? 'sobre-nos-mobile.mp4' : 'sobre-nos-desktop.mp4';
-  video.classList.toggle('is-portrait',mobile);
-  video.playsInline = true;
-  video.controls = false;
-  video.disablePictureInPicture = true;
-  video.disableRemotePlayback = true;
+  const video = prepareAboutVideo();
+  preparedAboutVideo = null;
   video.preload = 'auto';
   portal.append(video);
   document.body.append(portal);
