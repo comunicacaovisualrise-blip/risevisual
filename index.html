@@ -587,7 +587,7 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
   .shop-header.retail-header .header-brand-group {
     grid-column:2;
     grid-row:1;
-    justify-self:stretch;
+    justify-self:center;
     flex-direction:row;
     align-items:center;
     flex-wrap:nowrap;
@@ -607,8 +607,9 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
     padding:2px 4px;
     font-size:11px;
     white-space:nowrap;
-    flex:1 1 auto;
+    flex:0 0 auto;
     text-align:center;
+    transform:translateX(clamp(4px,calc(3vw - 4px),10px));
   }
   .shop-header.retail-header>.mobile-product-trigger {
     position:static!important;
