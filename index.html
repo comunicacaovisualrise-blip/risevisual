@@ -504,9 +504,14 @@ input.locked-access-email[readonly]{background:#f1f4f9;border-color:#e0e5ee;colo
 @media(max-width:550px){.shop-header.retail-header>.mobile-product-trigger{top:-23px;height:24px;width:28px;min-width:28px!important}.retail-utility>span:first-child{padding-left:36px}.shop-header.retail-header .header-brand-group{justify-content:flex-start;justify-self:start}}
 
 /* Blend catalogue-category photos into their own pastel tile instead of a white rectangle. */
-.summary #productTotal:has(.partner-support-price){min-width:0;font-size:inherit}
-.summary #productTotal .partner-support-price{min-width:0}
-.summary #productTotal .partner-support-result>strong{font-size:clamp(20px,5vw,30px)}
+.summary .product-support-breakdown{
+  display:block;
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid #dce3ef;
+}
+.summary .product-support-breakdown .partner-support-price{min-width:0}
+.summary .product-support-breakdown .partner-support-result>strong{font-size:clamp(20px,5vw,30px)}
 @media (max-width:600px) {
   .rise-footer-payment .rise-payment-methods {
     width:100%;
@@ -2868,16 +2873,18 @@ const updatePriceBeforeProductSupport = updatePrice;
 updatePrice = function (...args) {
   const result = updatePriceBeforeProductSupport(...args);
   const host = document.getElementById('productTotal');
+  const subtotalRow = host?.parentElement;
+  subtotalRow?.nextElementSibling?.matches('.product-support-breakdown') &&
+    subtotalRow.nextElementSibling.remove();
   if (!host || !config || !validConfig()) return result;
   const quote = priceQuote();
   if (!quote) return result;
   const support = partnerSupportPriceMarkup(quote.productTotal);
   if (!support) return result;
-  const subtotal = priceConfig();
-  const extras = Math.round((subtotal - quote.productTotal) * 100);
-  host.innerHTML = support + (extras > 0
-    ? '<small style="display:block;font-size:12px;margin-top:8px">Subtotal com serviços: ' + esc(money(subtotal)) + '</small>'
-    : '');
+  const breakdown = document.createElement('div');
+  breakdown.className = 'product-support-breakdown';
+  breakdown.innerHTML = support.replace('Valor integral</span>','Valor integral dos produtos</span>');
+  subtotalRow.after(breakdown);
   return result;
 };
 const shortcutMobileLayout = matchMedia('(max-width:760px)');
