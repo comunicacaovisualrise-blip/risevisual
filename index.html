@@ -3325,7 +3325,7 @@ function prepareAboutVideo() {
   preparedAboutVideo = video;
   return video;
 }
-function warmAboutAfterLoad() {
+function scheduleAboutVideoPreload() {
   if (navigator.connection?.saveData || /2g/.test(navigator.connection?.effectiveType || '')) return;
   const warm = () => {
     if (!activeAboutPortal && state.view !== 'about') prepareAboutVideo().preload = 'auto';
@@ -3333,8 +3333,7 @@ function warmAboutAfterLoad() {
   if (window.requestIdleCallback) requestIdleCallback(warm,{timeout:2500});
   else setTimeout(warm,900);
 }
-if (document.readyState === 'complete') warmAboutAfterLoad();
-else window.addEventListener('load',warmAboutAfterLoad,{once:true});
+scheduleAboutVideoPreload();
 go = function (view, ...args) {
   if (view !== 'about' || state.view === 'about' ||
       typeof HTMLDialogElement === 'undefined') {
@@ -3368,7 +3367,26 @@ go = function (view, ...args) {
   try {portal.showModal()}
   catch {return enter()}
   timer = setTimeout(enter,8000);
-  video.play().catch(enter);
+  // Keep the first attempt in the click handler so audio can start on mobile.
+  function start() {
+    if (activeAboutPortal !== portal) return;
+    video.play().catch(error => {
+      if (error.name === 'AbortError') {
+        // A cold media load can interrupt play before the source is ready.
+        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          setTimeout(retry,0);
+        } else {
+          video.addEventListener('loadeddata',retry,{once:true});
+        }
+        return;
+      }
+      enter();
+    });
+  }
+  function retry() {
+    if (activeAboutPortal === portal) video.play().catch(enter);
+  }
+  start();
 };
 let measuredMobileHeader;
 const mobileHeaderResize = new ResizeObserver(centerMobileAbout);
