@@ -4377,12 +4377,19 @@ window.importRiseLegacyCommercial=async function() {
 const quoteStageLabels={sent:'Orçamento enviado',negotiating:'Em negociação',won:'Venda concluída',lost:'Venda não fechada',refunded:'Estornado'};
 const quoteColumnStages=[null,'sent','negotiating','won','lost'];
 function quoteStage(quote){return quote.refund?'refunded':quote.orderId?'won':quote.commercialStage||'sent'}
+function canDragCrmQuote(quote){
+  if(quote.refund)return false;
+  if(!quote.orderId)return true;
+  const order=state.orders.find(item=>String(item.id)===String(quote.orderId));
+  return order?.status==='Pagamento pendente'&&order.paymentStatus==='pending'&&!order.payment?.confirmedAt;
+}
 window.quoteCardsForCrmColumn=function(index){
   return adminSession?remoteKitQuotes.filter(quote=>(quoteStage(quote)==='refunded'?'lost':quoteStage(quote))===quoteColumnStages[index]):[];
 };
 window.crmQuoteCardMarkup=function(quote){
   const stage=quoteStage(quote);
-  return '<article class="deal crm-quote-card '+(stage==='refunded'?'crm-quote-refunded':'')+'"'+(quote.orderId?'':' data-crm-quote="'+esc(quote.id)+'" data-current-stage="'+stage+'" onpointerdown="beginCrmQuoteDrag(event,this)"')+'>'+(quote.orderId?'':'<span class="crm-quote-grip" title="Arrastar para mudar de coluna" aria-hidden="true">⠿</span>')+'<span class="pill gray">'+quoteStageLabels[stage]+'</span>'+
+  const draggable=canDragCrmQuote(quote);
+  return '<article class="deal crm-quote-card '+(stage==='refunded'?'crm-quote-refunded':'')+'"'+(!draggable?'':' data-crm-quote="'+esc(quote.id)+'" data-current-stage="'+stage+'" onpointerdown="beginCrmQuoteDrag(event,this)"')+'>'+(!draggable?'':'<span class="crm-quote-grip" title="Arrastar para mudar de coluna" aria-hidden="true">⠿</span>')+'<span class="pill gray">'+quoteStageLabels[stage]+'</span>'+
     '<h4>Orçamento #'+esc(quote.number)+'</h4><p>'+esc(quote.contact?.name||'Cliente')+'</p>'+
     '<div class="price">'+money(quote.total)+'</div><button type="button" class="link" data-quote="'+esc(quote.id)+
     '" onclick="openCrmKitQuote(this.dataset.quote)">Ver orçamento →</button></article>';
@@ -4476,17 +4483,16 @@ window.openCrmKitQuote=function(id){
     '<button type="submit" class="btn primary" form="crmQuoteStageForm">Salvar status</button>';
   const order=state.orders.find(item=>String(item.id)===String(quote.orderId));
   const paid=order?.paymentStatus==='paid'||!!order?.payment?.confirmedAt;
-  const canReopen=stage==='won'&&order?.status==='Pagamento pendente'&&!paid&&order.paymentStatus==='pending';
   if(!paid&&stage!=='lost'&&stage!=='refunded'&&(!order||!['Cancelado','Concluído'].includes(order.status)))footer+=' <button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openCrmQuoteManualPayment(this.dataset.quote)">Registrar pagamento</button>';
   if(!quote.orderId)footer+=' <button type="button" class="btn danger" data-quote="'+esc(id)+'" onclick="confirmCrmQuoteDeletion(this.dataset.quote)">Excluir orçamento</button>';
   if(stage==='won'&&paid)footer+=' <button type="button" class="btn" data-quote="'+esc(id)+'" onclick="openCrmQuoteRefund(this.dataset.quote)">Registrar estorno</button>';
   modal('Orçamento #'+esc(quote.number),customerQuoteStatusBadge(stage)+'</span>'+(paid&&stage!=='refunded'?' <span class="pill review-accepted">Pago</span>':'')+'<p class="hint">'+
     esc(noticeDate(quote.createdAt))+'</p>'+contact+quoteItemsMarkup(quote)+
     (quote.comment?'<p><strong>Sobre a arte</strong><br>'+esc(quote.comment)+'</p>':'')+
-    quoteRefundMarkup(quote)+(canReopen?'<details><summary class="btn">Mover venda para outra etapa</summary><p class="hint">O pedido pendente será cancelado e o cliente verá o novo status em Meus orçamentos.</p>':'')+((quote.orderId&&!canReopen)?'':'<form id="crmQuoteStageForm" data-quote="'+esc(id)+'" onsubmit="event.preventDefault();saveCrmQuoteStage(this)">'+
-      '<label>Status comercial<select name="stage">'+(canReopen?['negotiating','sent','lost']:['sent','negotiating','won','lost']).map(value=>
+    quoteRefundMarkup(quote)+(quote.orderId?'':'<form id="crmQuoteStageForm" data-quote="'+esc(id)+'" onsubmit="event.preventDefault();saveCrmQuoteStage(this)">'+
+      '<label>Status comercial<select name="stage">'+['sent','negotiating','won','lost'].map(value=>
       '<option value="'+value+'" '+(stage===value?'selected':'')+'>'+quoteStageLabels[value]+'</option>').join('')+
-      '</select></label>'+(canReopen?'<button class="btn primary" type="submit">Confirmar mudança</button>':'')+'</form>')+(canReopen?'</details>':''),footer,true);
+      '</select></label></form>'),footer,true);
 };
 window.confirmCrmQuoteDeletion=function(id){
   const quote=remoteKitQuotes.find(item=>item.id===id);
@@ -4499,7 +4505,7 @@ window.confirmCrmQuoteDeletion=function(id){
 window.deleteCrmQuote=async function(button){
   const id=button.dataset.quote;
   const quote=remoteKitQuotes.find(item=>item.id===id);
-  if(!adminSession||!quote||kitConversionsBusy.has(id))return;
+  if(!adminSession||!quote||quote.orderId||kitConversionsBusy.has(id))return;
   kitConversionsBusy.add(id);
   button.disabled=true;
   try{
@@ -4562,7 +4568,7 @@ window.registerCrmQuotePayment=async function(form){
 window.saveCrmQuoteStage=function(form){return moveCrmQuoteToStage(form.dataset.quote,form.elements.namedItem('stage').value)};
 async function moveCrmQuoteToStage(id,stage){
   const quote=remoteKitQuotes.find(item=>item.id===id);
-  if(!adminSession||!quote||quote.orderId||kitConversionsBusy.has(id))return;
+  if(!adminSession||!quote||!canDragCrmQuote(quote)||kitConversionsBusy.has(id))return;
   kitConversionsBusy.add(id);
   try{
     if(stage==='won'){
